@@ -1,0 +1,3285 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0d0f14">
+<title>Grand Taesa Action</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Bowlby+One&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --panel: rgba(16, 19, 27, 0.84);
+    --line: rgba(255, 255, 255, 0.13);
+    --text: #f4f6fb;
+    --muted: #9aa4b8;
+    --accent: #ff5d5d;
+    --accent2: #ffd166;
+    --ok: #4ade80;
+    --title: "Bowlby One", Impact, "Arial Black", sans-serif;
+    --kor: "Black Han Sans", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button { font-family: inherit; color: inherit; }
+  .hidden { display: none !important; }
+  #game { position: fixed; inset: 0; z-index: 0; }
+  #game canvas { display: block; transition: filter .4s; }
+  #bubbles { position: fixed; inset: 0; pointer-events: none; z-index: 1; overflow: hidden; }
+
+  .bubble {
+    position: absolute; left: 0; top: 0; max-width: 230px; padding: 6px 12px 7px; border-radius: 12px;
+    background: #fff; color: #1a1d24; font-size: 15px; font-weight: 600; line-height: 1.3; text-align: center;
+    box-shadow: 0 3px 10px rgba(0,0,0,.25); word-break: keep-all;
+  }
+  .bubble b { display: block; font-size: 12px; color: #64748b; font-weight: 700; }
+  .bubble::after {
+    content: ""; position: absolute; left: 50%; bottom: -6px; margin-left: -6px;
+    border: 6px solid transparent; border-bottom: 0; border-top-color: #fff;
+  }
+  .float {
+    position: absolute; left: 0; top: 0; font-family: var(--kor); font-size: 24px; white-space: nowrap;
+    text-shadow: 0 2px 0 #000, 0 0 6px rgba(0,0,0,.6), 2px 0 0 #000, -2px 0 0 #000, 0 -2px 0 #000;
+  }
+
+  /* ---------- HUD ---------- */
+  #hud { position: fixed; inset: 0; z-index: 2; pointer-events: none; }
+  #info {
+    position: absolute; left: calc(10px + env(safe-area-inset-left)); top: calc(10px + env(safe-area-inset-top));
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px;
+    font-size: 14px; min-width: 230px; backdrop-filter: blur(6px);
+  }
+  #company { font-family: var(--kor); font-size: 18px; letter-spacing: .3px; }
+  #where { color: var(--muted); margin-bottom: 6px; }
+  .row { display: flex; align-items: center; gap: 8px; margin-top: 3px; }
+  .lbl { color: var(--muted); width: 60px; flex: none; }
+  .bar { flex: 1; height: 10px; border-radius: 5px; background: rgba(255,255,255,.12); overflow: hidden; min-width: 70px; }
+  #stressFill { height: 100%; width: 50%; background: #ffd166; transition: width .15s; }
+  #stressNum { width: 30px; text-align: right; font-variant-numeric: tabular-nums; }
+  #topBtns { position: absolute; right: calc(10px + env(safe-area-inset-right)); top: calc(10px + env(safe-area-inset-top)); display: flex; gap: 8px; }
+  #stars {
+    position: absolute; right: calc(12px + env(safe-area-inset-right)); top: calc(62px + env(safe-area-inset-top));
+    font-size: 30px; letter-spacing: 2px; color: rgba(255,255,255,.25);
+    text-shadow: 0 0 2px #000, 0 2px 0 #000;
+  }
+  #stars b { color: #fff; font-weight: 400; }
+  #stars.flash b { animation: flash .25s 6 alternate; }
+  @keyframes flash { from { color: #fff; } to { color: #ff4d4d; } }
+  .icon {
+    pointer-events: auto; width: 42px; height: 42px; border-radius: 12px; border: 1px solid var(--line);
+    background: var(--panel); font-size: 18px; cursor: pointer;
+  }
+  #actBtns {
+    position: absolute; right: calc(16px + env(safe-area-inset-right)); bottom: calc(20px + env(safe-area-inset-bottom));
+    display: flex; align-items: flex-end; gap: 14px;
+  }
+  .act {
+    pointer-events: auto; border-radius: 50%; border: 2px solid rgba(255,255,255,.35); cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; touch-action: none;
+  }
+  .act small { font-size: 12px; margin-top: 4px; font-weight: 700; opacity: .9; }
+  .act.big { width: 88px; height: 88px; font-size: 34px; background: rgba(255, 93, 93, .85); }
+  .act.small { width: 64px; height: 64px; font-size: 24px; background: rgba(80, 120, 220, .82); margin-bottom: 6px; }
+  .act:active, .act.on { transform: scale(.92); filter: brightness(1.2); }
+  #stick {
+    position: absolute; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,.3); background: rgba(255,255,255,.08); display: none;
+  }
+  #knob { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px 0 0 -26px; border-radius: 50%; background: rgba(255,255,255,.55); }
+  #workbar {
+    position: absolute; left: 0; top: 0; width: 150px; height: 26px; border-radius: 13px; overflow: hidden;
+    background: rgba(0,0,0,.6); border: 1px solid rgba(255,255,255,.3); display: none;
+  }
+  #workFill { position: absolute; inset: 0; width: 0; background: var(--ok); opacity: .8; }
+  #workLbl { position: relative; display: block; text-align: center; font-size: 13px; line-height: 24px; font-weight: 700; }
+  #target {
+    position: absolute; left: 0; top: 0; display: none; padding: 5px 12px 6px; border-radius: 10px; text-align: center;
+    background: rgba(16, 19, 27, .86); border: 1px solid rgba(255,255,255,.22); white-space: nowrap; line-height: 1.3;
+  }
+  #target b { display: block; font-size: 16px; color: var(--text); }
+  #target span { font-size: 13px; color: var(--accent2); }
+  #banner {
+    position: absolute; left: 50%; top: 22%; transform: translate(-50%, -50%); padding: 12px 20px; border-radius: 14px;
+    background: var(--panel); border: 1px solid var(--line); font-size: 21px; font-weight: 800; text-align: center;
+    opacity: 0; transition: opacity .3s; max-width: 90vw; word-break: keep-all;
+  }
+  #banner.show { opacity: 1; }
+  #hint {
+    position: absolute; left: 50%; bottom: calc(130px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+    background: var(--panel); border-radius: 10px; padding: 9px 16px; font-size: 14px; color: var(--muted);
+    text-align: center; transition: opacity 1s; width: max-content; max-width: 92vw;
+  }
+  #wasted {
+    position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: linear-gradient(transparent 35%, rgba(0,0,0,.55) 45%, rgba(0,0,0,.55) 58%, transparent 68%);
+    opacity: 0; transition: opacity .3s;
+  }
+  #wasted.show { opacity: 1; }
+  #wasted h2 {
+    margin: 0; font-family: var(--title); font-weight: 400; font-size: clamp(48px, 12vw, 96px); letter-spacing: 2px;
+    color: #c1272d; -webkit-text-stroke: 3px #000; text-shadow: 0 4px 0 #000;
+  }
+  #wasted.busted h2 { color: #f2f2f2; }
+  #hpFill { height: 100%; width: 100%; background: #ef4444; transition: width .15s; }
+  #dead {
+    position: absolute; inset: 0; z-index: 4; display: none; flex-direction: column; align-items: center; justify-content: center;
+    background: linear-gradient(transparent 25%, rgba(0,0,0,.65) 38%, rgba(0,0,0,.65) 66%, transparent 78%);
+  }
+  #dead.show { display: flex; pointer-events: auto; }
+  #dead h2 {
+    margin: 0; font-family: var(--title); font-weight: 400; font-size: clamp(48px, 12vw, 96px); letter-spacing: 2px;
+    color: #c1272d; -webkit-text-stroke: 3px #000; text-shadow: 0 4px 0 #000;
+  }
+  #dead p { margin: 4px 0 18px; font-family: var(--kor); font-size: 20px; color: #fff; text-shadow: 0 2px 0 #000; }
+  #dead .btns { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  #dead button { padding: 12px 20px; font-size: 17px; font-weight: 800; border-radius: 12px; border: 0; cursor: pointer; background: var(--accent); }
+  #dead button + button { background: #e5e7eb; }
+  #hurtFx { position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 120px rgba(220,38,38,.75); opacity: 0; transition: opacity .35s; }
+  #wasted p { margin: 4px 0 0; font-family: var(--kor); font-size: 20px; color: #fff; text-shadow: 0 2px 0 #000; }
+
+  /* ---------- 조절 패널 ---------- */
+  #tune {
+    position: fixed; z-index: 3; right: calc(10px + env(safe-area-inset-right)); top: calc(100px + env(safe-area-inset-top));
+    width: 250px; max-height: calc(100% - 220px); overflow: auto; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 14px; padding: 12px 14px; font-size: 13px; backdrop-filter: blur(8px); touch-action: pan-y;
+  }
+  #tune h3 { margin: 0 0 4px; font-size: 14px; }
+  #tune p { margin: 0 0 10px; color: var(--muted); font-size: 11px; }
+  #tune label { display: block; margin: 10px 0; }
+  #tune label span { float: right; color: var(--accent2); font-variant-numeric: tabular-nums; }
+  #tune input[type=range] { width: 100%; margin-top: 4px; }
+  #tune input[type=color] { width: 100%; height: 30px; border: 0; background: none; margin-top: 4px; }
+  #tune .btns { display: flex; gap: 8px; margin-top: 12px; }
+  #tune .btns button { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid var(--line); background: rgba(255,255,255,.08); cursor: pointer; }
+  #tune .dev { display: none; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+  body.devmode #tune .dev { display: block; }
+  #tune .cheats label { margin: 6px 0; cursor: pointer; }
+  #tune .cheats input { margin-right: 6px; }
+  #devBadge {
+    display: none; position: absolute; left: 50%; top: calc(10px + env(safe-area-inset-top)); transform: translateX(-50%);
+    padding: 3px 10px; border-radius: 8px; background: #7c3aed; font-size: 12px; font-weight: 800; letter-spacing: 1px;
+  }
+  body.devmode #devBadge { display: block; }
+
+  /* ---------- 로딩 / 타이틀 ---------- */
+  #loading {
+    position: fixed; inset: 0; z-index: 6; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+    padding: 0 20px calc(40px + env(safe-area-inset-bottom)); background: #000 center / cover no-repeat;
+  }
+  #loading::before { content: ""; position: absolute; inset: 0; background: linear-gradient(transparent 40%, rgba(0,0,0,.85)); }
+  #loading > * { position: relative; }
+  #loadLogo { font-family: var(--title); font-size: 34px; line-height: .95; text-align: center; -webkit-text-stroke: 1.5px #000; margin-bottom: 18px; }
+  #loadTip { max-width: 520px; text-align: center; font-size: 14px; color: #e5e7eb; min-height: 40px; word-break: keep-all; }
+  #loadBar { width: min(320px, 80vw); height: 4px; background: rgba(255,255,255,.2); border-radius: 2px; overflow: hidden; margin-top: 14px; }
+  #loadBar i { display: block; height: 100%; width: 0; background: var(--accent2); transition: width .3s; }
+  #loadErr { color: var(--accent); font-size: 13px; margin-top: 10px; text-align: center; }
+
+  #title {
+    position: fixed; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center; gap: 32px;
+    padding: 20px; background: radial-gradient(circle at 30% 20%, #232838, #0b0d12 70%); overflow: auto; touch-action: pan-y;
+  }
+  #poster {
+    display: block; height: min(88vh, 900px); width: auto; aspect-ratio: 1024 / 1536; flex: none;
+    border: 3px solid #000; box-shadow: 0 20px 60px rgba(0,0,0,.6);
+  }
+  .menu { width: 100%; max-width: 380px; flex: none; }
+  .menu h1 { margin: 0; font-family: var(--title); font-weight: 400; font-size: 34px; line-height: 1; letter-spacing: .5px; }
+  .menu .kor { font-family: var(--kor); color: var(--accent2); font-size: 18px; margin: 6px 0 18px; }
+  .field { display: block; font-size: 13px; font-weight: 700; color: var(--muted); margin: 14px 0 6px; }
+  .field input {
+    display: block; width: 100%; margin-top: 6px; padding: 12px 14px; font-size: 16px; border-radius: 10px;
+    border: 1px solid var(--line); background: rgba(255,255,255,.06); color: var(--text); outline: none; user-select: text;
+  }
+  .field input:focus { border-color: var(--accent2); }
+  #deptGrid, #heroGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .dept {
+    padding: 10px 8px; border-radius: 10px; border: 1px solid var(--line); background: rgba(255,255,255,.05);
+    cursor: pointer; font-size: 14px; font-weight: 700; text-align: left; display: flex; align-items: center; gap: 8px;
+  }
+  .dept i { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .dept em { margin-left: auto; font-style: normal; font-size: 10px; color: var(--muted); font-weight: 600; }
+  .dept.sel { border-color: var(--accent2); background: rgba(255, 209, 102, .14); }
+  .dept:disabled { opacity: .38; cursor: not-allowed; }
+  #btnStart {
+    margin-top: 20px; width: 100%; padding: 15px; font-size: 19px; border: 0; border-radius: 12px;
+    background: var(--accent); cursor: pointer; font-family: var(--kor); letter-spacing: 1px;
+  }
+  .fine { color: var(--muted); font-size: 11px; margin-top: 14px; line-height: 1.5; }
+  @media (max-aspect-ratio: 1/1) {
+    #title { flex-direction: column; justify-content: flex-start; gap: 18px; }
+    #poster { width: 100%; max-width: 520px; height: auto; }
+  }
+</style>
+<script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+</script>
+</head>
+<body>
+<div id="game"></div>
+<div id="bubbles"></div>
+
+<div id="hud" class="hidden">
+  <div id="info">
+    <div id="company"></div>
+    <div id="where"></div>
+    <div class="row"><span class="lbl">체력</span><div class="bar"><div id="hpFill"></div></div><span id="hpNum"></span></div>
+    <div class="row"><span class="lbl">스트레스</span><div class="bar"><div id="stressFill"></div></div><span id="stressNum"></span></div>
+    <div class="row"><span class="lbl">피해액</span><span id="damage">0원</span></div>
+    <div class="row"><span class="lbl">업무</span><span id="works">0건</span></div>
+  </div>
+  <div id="topBtns">
+    <button id="btnMute" class="icon" title="소리">🔊</button>
+    <button id="btnTune" class="icon" title="조절 패널">⚙️</button>
+  </div>
+  <div id="stars"></div>
+  <div id="devBadge">DEV</div>
+  <div id="actBtns">
+    <button id="btnTalk" class="act small">💬<small>대화·업무</small></button>
+    <button id="btnPunch" class="act big">👊<small>펀치</small></button>
+  </div>
+  <div id="stick"><div id="knob"></div></div>
+  <div id="workbar"><div id="workFill"></div><span id="workLbl"></span></div>
+  <div id="target"><b></b><span></span></div>
+  <div id="banner"></div>
+  <div id="hurtFx"></div>
+  <div id="wasted"><h2></h2><p></p></div>
+  <div id="dead"><h2>WASTED</h2><p>과로와 폭행으로 쓰러졌습니다...</p>
+    <div class="btns"><button id="btnRespawn">다시 출근하기 (이어서)</button><button id="btnRestart">처음부터</button></div></div>
+  <div id="hint">화면 왼쪽 드래그: 이동 · 화면 오른쪽 탭/👊: 펀치 · 💬: 대화/업무<br>PC: WASD·방향키 이동 · Space 펀치 · E 대화/업무</div>
+</div>
+
+<div id="tune" class="hidden">
+  <h3>🎛️ 실시간 조절 패널</h3>
+  <label>펀치 파워 <span data-out="punch"></span><input type="range" min="0.5" max="3" step="0.1" data-k="punch"></label>
+  <label>이동 속도 <span data-out="speed"></span><input type="range" min="2" max="10" step="0.5" data-k="speed"></label>
+  <label>카메라 거리 <span data-out="camDist"></span><input type="range" min="8" max="30" step="1" data-k="camDist"></label>
+  <label>카메라 각도 <span data-out="camAngle"></span><input type="range" min="30" max="85" step="1" data-k="camAngle"></label>
+  <label>화면 흔들림 <span data-out="shake"></span><input type="range" min="0" max="2" step="0.1" data-k="shake"></label>
+  <label>NPC 날아가는 정도 <span data-out="fly"></span><input type="range" min="0.5" max="3" step="0.1" data-k="fly"></label>
+  <label>외곽선 두께 (0=끄기) <span data-out="outline"></span><input type="range" min="0" max="2.5" step="0.1" data-k="outline"></label>
+  <label>배경음악 <span data-out="music"></span><input type="range" min="0" max="1" step="0.05" data-k="music"></label>
+  <label>효과음 <span data-out="sfx"></span><input type="range" min="0" max="1.5" step="0.05" data-k="sfx"></label>
+  <div class="btns"><button id="tuneReset">기본값</button><button id="tuneCopy">값 복사</button></div>
+  <div class="dev">
+  <h3>🛠️ 개발자 모드 (치트)</h3>
+  <div class="cheats">
+    <label><input type="checkbox" data-cheat="noWanted"> 🚫 수배 없음 (경비 출동 안 함)</label>
+    <label><input type="checkbox" data-cheat="god"> 🛡️ 무적 (여사님 반격·경비 체포 무시)</label>
+    <label><input type="checkbox" data-cheat="onePunch"> 💥 원펀치 (기물 한 방에 파괴)</label>
+  </div>
+  <div class="btns"><button id="devOff">개발자 모드 끄기</button></div>
+  </div>
+</div>
+
+<div id="title" class="hidden">
+  <img id="poster" src="assets/poster2.png" alt="포스터">
+  <div class="menu">
+    <h1>Grand<br>Taesa Action</h1>
+    <div class="kor">그랜드 퇴사 액션</div>
+    <label class="field">회사 이름<input id="inCompany" maxlength="14" placeholder="(주)한숨제약" autocomplete="off"></label>
+    <div class="field">주인공</div>
+    <div id="heroGrid"><button class="dept" data-id="m">🙋‍♂️ 남자 사원</button><button class="dept" data-id="f">🙋‍♀️ 여자 사원</button></div>
+    <div class="field">근무 부서</div>
+    <div id="deptGrid"></div>
+    <button id="btnStart">출근하기 ▶</button>
+    <p id="fileWarn" class="fine" style="display:none;color:#fbbf24;font-weight:700">⚠ 파일을 더블클릭해서 열면 3D 캐릭터가 안 보여요.<br>게임 폴더의 「게임 실행.bat」으로 열어주세요.</p>
+    <p class="fine">※ 실존 회사·인물과 무관한 가상의 패러디 게임입니다.<br>회색 부서는 다른 층에 있어요 (준비중).</p>
+  </div>
+</div>
+
+<div id="loading">
+  <div id="loadLogo">grand<br>taesa<br>action</div>
+  <div id="loadTip">출근 준비 중...</div>
+  <div id="loadBar"><i></i></div>
+  <div id="loadErr"></div>
+</div>
+
+<script>
+  setTimeout(function () {
+    if (!window.__gameLoaded) document.getElementById('loadErr').textContent = '게임 엔진을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.';
+  }, 12000);
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
+window.__gameLoaded = true;
+
+/* =====================================================================
+   1. 유틸 / 저장 / 조절값
+   ===================================================================== */
+const $ = s => document.querySelector(s);
+const rand = (a, b) => a + Math.random() * (b - a);
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const H = Math.PI / 2, PI = Math.PI;
+function angLerp(a, b, t) {
+  const d = ((b - a + PI) % (PI * 2) + PI * 2) % (PI * 2) - PI;
+  return a + d * t;
+}
+function fmtWon(n) {
+  if (n >= 1e8) return (n / 1e8).toFixed(1).replace(/\.0$/, '') + '억원';
+  if (n >= 1e4) return Math.round(n / 1e4).toLocaleString('ko-KR') + '만원';
+  return Math.round(n).toLocaleString('ko-KR') + '원';
+}
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+};
+const MOBILE = matchMedia('(pointer: coarse)').matches;
+const DEFAULT_TUNE = { punch: 1, speed: 3, camDist: 11, camAngle: 45, shake: 1, fly: 1, music: 0.4, sfx: 1, outline: 0.9, shirt: '#f8fafc' };
+const tune = { ...DEFAULT_TUNE, ...store.get('gta_tune2', {}) };
+// 개발자 모드: 타이틀의 "Grand Taesa Action" 글자를 5번 연속 탭(클릭)하면 켜짐 (주소 끝에 ?dev=1 도 가능)
+let devMode = store.get('gta_dev', false) || new URLSearchParams(location.search).has('dev');
+// 치트 (개발자 모드에서만 켤 수 있음)
+const cheat = { noWanted: false, god: false, onePunch: false };
+const setLoad = (pct, msg) => { $('#loadBar i').style.width = pct + '%'; if (msg) $('#loadTip').textContent = msg; };
+
+/* =====================================================================
+   2. 사운드 — 효과음·환경음은 WebAudio로 합성, 배경음악은 assets/bgm.mp3
+   ===================================================================== */
+const snd = { ctx: null, intensity: 0 };
+let noiseBuf, sfxBus, ambBus, muted = store.get('gta_muted', false);
+
+function audioInit() {
+  if (snd.ctx) { if (snd.ctx.state === 'suspended') snd.ctx.resume(); return; }
+  try { snd.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
+  const ctx = snd.ctx;
+  const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4; comp.connect(ctx.destination);
+  sfxBus = ctx.createGain(); sfxBus.connect(comp);
+  ambBus = ctx.createGain(); ambBus.gain.value = 0.6; ambBus.connect(sfxBus);
+  applyVolumes();
+  noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+  const d = noiseBuf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  // 사무실 웅웅거림 (에어컨/형광등)
+  const hum = ctx.createBufferSource(); hum.buffer = noiseBuf; hum.loop = true;
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 160;
+  const hg = ctx.createGain(); hg.gain.value = 0.1;
+  hum.connect(lp).connect(hg).connect(ambBus); hum.start();
+  setInterval(musicTick, 250);
+  scheduleAmbient();
+}
+function applyVolumes() {
+  if (!snd.ctx) return;
+  sfxBus.gain.value = muted ? 0 : tune.sfx;
+  musicTick();
+}
+function env(g, t, peak, dur, a = 0.004) {
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), t + a);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+}
+function osc(type, f0, f1, dur, vol, t0 = 0, bus = sfxBus, filt) {
+  const ctx = snd.ctx, t = ctx.currentTime + t0;
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = type; o.frequency.setValueAtTime(f0, t);
+  if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(Math.max(1, f1), t + dur);
+  env(g, t, vol, dur);
+  let node = o;
+  if (filt) { const f = ctx.createBiquadFilter(); f.type = filt[0]; f.frequency.value = filt[1]; o.connect(f); node = f; }
+  node.connect(g).connect(bus); o.start(t); o.stop(t + dur + 0.05);
+}
+function nz(dur, vol, type, freq, t0 = 0, bus = sfxBus, q = 1, f1) {
+  const ctx = snd.ctx, t = ctx.currentTime + t0;
+  const s = ctx.createBufferSource(); s.buffer = noiseBuf;
+  const f = ctx.createBiquadFilter(); f.type = type; f.frequency.setValueAtTime(freq, t); f.Q.value = q;
+  if (f1) f.frequency.exponentialRampToValueAtTime(f1, t + dur);
+  const g = ctx.createGain(); env(g, t, vol, dur, 0.003);
+  s.connect(f).connect(g).connect(bus); s.start(t, Math.random() * 1.5); s.stop(t + dur + 0.05);
+}
+// 사람 목소리 비슷한 "으악" (톱니파 + 포먼트 필터)
+function grunt(pitch = 1, vol = 0.3, t0 = 0, bus = sfxBus, dur = 0.32) {
+  if (!snd.ctx || muted) return;
+  const ctx = snd.ctx, t = ctx.currentTime + t0;
+  const o = ctx.createOscillator(); o.type = 'sawtooth';
+  const f = rand(140, 180) * pitch;
+  o.frequency.setValueAtTime(f * 1.35, t); o.frequency.exponentialRampToValueAtTime(f * 0.7, t + dur);
+  const g = ctx.createGain(); env(g, t, vol, dur, 0.02);
+  for (const [fr, q] of [[rand(700, 900), 6], [rand(1100, 1350), 8], [2600, 10]]) {
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = fr * Math.sqrt(pitch); bp.Q.value = q;
+    o.connect(bp); bp.connect(g);
+  }
+  g.connect(bus); o.start(t); o.stop(t + dur + 0.05);
+}
+function crashSound(kind) {
+  osc('sine', 110, 45, 0.25, 0.45);
+  if (kind === 'glass' || kind === 'electronic') {
+    for (let i = 0; i < 9; i++) { const f = rand(2500, 6500); osc('sine', f, f * 0.97, rand(0.08, 0.35), 0.07, i * rand(0.008, 0.035)); }
+    nz(0.3, 0.3, 'highpass', 4000);
+  }
+  if (kind === 'electronic') {
+    osc('square', 1500, 60, 0.28, 0.1, 0, sfxBus, ['lowpass', 3000]);
+    for (let i = 0; i < 6; i++) nz(0.02, 0.18, 'highpass', 5000, rand(0.02, 0.35));
+  }
+  if (kind === 'metal') {
+    const b = rand(170, 320);
+    [1, 2.76, 5.4, 8.93].forEach((m, i) => osc('sine', b * m, b * m * 0.995, 0.9 / (i + 1) + 0.25, 0.16 / (i + 1)));
+    nz(0.25, 0.25, 'bandpass', 2500, 0, sfxBus, 2);
+  }
+  if (kind === 'wood') { for (const t of [0, 0.05, 0.11]) nz(0.08, 0.32, 'lowpass', 1600, t); }
+  if (kind === 'plastic') { nz(0.15, 0.3, 'bandpass', 1300, 0, sfxBus, 2); osc('triangle', 320, 120, 0.1, 0.15); }
+  if (kind === 'plant') { nz(0.3, 0.3, 'lowpass', 600); }
+}
+function sfx(kind, p = 1) {
+  if (!snd.ctx || muted) return;
+  try {
+    switch (kind) {
+      case 'punch': osc('sine', 170, 45, 0.16, 0.7); nz(0.04, 0.4, 'highpass', 2500); nz(0.1, 0.35, 'lowpass', 900); break;
+      case 'whoosh': nz(0.16, 0.14, 'bandpass', 600, 0, sfxBus, 1.5, 2400); break;
+      case 'thud': osc('sine', 120, 55, 0.12, 0.4); nz(0.06, 0.2, 'lowpass', 800); break;
+      case 'clang': { const b = rand(400, 600); osc('sine', b, b, 0.4, 0.15); osc('sine', b * 2.7, b * 2.7, 0.25, 0.07); osc('sine', 120, 60, 0.1, 0.3); break; }
+      case 'tink': osc('sine', 3200, 3100, 0.15, 0.08); osc('sine', 120, 60, 0.1, 0.3); break;
+      case 'grunt': grunt(p); break;
+      case 'boing': osc('triangle', 260, 720, 0.22, 0.2); break;
+      case 'boom': osc('sine', 80, 22, 1.2, 0.9); nz(1.3, 0.6, 'lowpass', 500); nz(0.4, 0.4, 'highpass', 2000); break;
+      case 'hiss': nz(2.4, 0.25, 'highpass', 3000); nz(2.4, 0.15, 'bandpass', 1200, 0, sfxBus, 1); break;
+      case 'psst': nz(1.2, 0.35, 'highpass', 2500, 0, sfxBus, 1, 6000); break;
+      case 'done': osc('sine', 660, 660, 0.12, 0.22); osc('sine', 880, 880, 0.2, 0.22, 0.12); break;
+      case 'type': nz(0.02, 0.08, 'highpass', 3000); break;
+      case 'step': nz(0.04, 0.05, 'lowpass', 500); break;
+      case 'siren': osc('square', 680, 940, 0.16, 0.06, 0, sfxBus, ['lowpass', 2000]); osc('square', 940, 680, 0.16, 0.06, 0.16, sfxBus, ['lowpass', 2000]); break;
+      case 'whistle': for (let i = 0; i < 6; i++) osc('sine', 2300, 2500, 0.06, 0.12, i * 0.07); break;
+      case 'slurp': nz(0.5, 0.15, 'bandpass', 500, 0, sfxBus, 3, 1500); break;
+      case 'click': osc('sine', 900, 900, 0.05, 0.1); break;
+      default: crashSound(kind);
+    }
+  } catch (e) {}
+}
+function scheduleAmbient() {
+  setTimeout(() => { if (running && snd.ctx && !muted) ambientEvent(); scheduleAmbient(); }, rand(2500, 7000));
+}
+function ambientEvent() {
+  const r = Math.random(), B = ambBus;
+  if (r < 0.22) { // 전화벨
+    for (let k = 0; k < 2; k++) for (let i = 0; i < 8; i++) {
+      osc('sine', 440, 440, 0.05, 0.035, k * 0.9 + i * 0.05, B); osc('sine', 480, 480, 0.05, 0.035, k * 0.9 + i * 0.05, B);
+    }
+  } else if (r < 0.52) { // 타자 소리
+    let t = 0; const n = 10 + Math.floor(Math.random() * 15);
+    for (let i = 0; i < n; i++) { t += rand(0.05, 0.14); nz(0.02, 0.05, 'highpass', 3000, t, B); }
+  } else if (r < 0.66) { // 복합기
+    nz(1.6, 0.05, 'bandpass', 900, 0, B, 4); osc('sawtooth', 60, 62, 1.6, 0.015, 0, B, ['lowpass', 300]);
+  } else if (r < 0.78) { // 기침
+    nz(0.15, 0.1, 'bandpass', 500, 0, B, 2); nz(0.15, 0.08, 'bandpass', 450, 0.25, B, 2);
+  } else { // 웅성웅성
+    for (let i = 0; i < 6; i++) grunt(rand(0.8, 1.6), 0.025, i * rand(0.12, 0.22), B, 0.14);
+  }
+}
+// 배경음악: assets/bgm.mp3 반복 재생. 인사팀 추격(★3 이상)이면 살짝 빠르게
+const bgm = new Audio('assets/bgm.mp3');
+bgm.loop = true; bgm.preload = 'auto';
+function musicTick() {
+  bgm.volume = muted ? 0 : clamp(tune.music, 0, 1);
+  bgm.playbackRate = snd.intensity > 0 ? 1.1 : 1;
+  if (bgm.paused && !muted && tune.music > 0) bgm.play().catch(() => {});
+}
+addEventListener('pointerdown', audioInit, { once: false, passive: true });
+
+/* =====================================================================
+   3. 렌더러 / 씬 / 조명
+   ===================================================================== */
+const gameEl = $('#game');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MOBILE ? 1.75 : 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+gameEl.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1b1f2a);
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 200);
+scene.add(new THREE.HemisphereLight(0xfff4e0, 0x7a6f62, 0.9));
+const sun = new THREE.DirectionalLight(0xffeccc, 2.7);
+sun.castShadow = true;
+sun.shadow.mapSize.set(MOBILE ? 1024 : 2048, MOBILE ? 1024 : 2048);
+Object.assign(sun.shadow.camera, { left: -20, right: 20, top: 20, bottom: -20, near: 1, far: 80 });
+sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.02;
+scene.add(sun, sun.target);
+
+function resize() {
+  renderer.setSize(innerWidth, innerHeight);
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize);
+resize();
+
+/* =====================================================================
+   4. 재질 / 지오메트리 헬퍼 / 베이크(드로우콜 합치기)
+   ===================================================================== */
+// 셀 셰이딩: 빛을 3단계(어두움/중간/밝음)로 끊어서 만화처럼 보이게 하는 명암표
+const toonRamp = new THREE.DataTexture(new Uint8Array([95, 170, 255]), 3, 1, THREE.RedFormat);
+toonRamp.minFilter = toonRamp.magFilter = THREE.NearestFilter; toonRamp.needsUpdate = true;
+const matCache = new Map();
+// o: op=투명도, e=발광색, ei=발광세기 (r/m은 예전 사실적 재질용으로 남겨둔 값)
+function mat(color, o = {}) {
+  const key = [color, o.r, o.m, o.op, o.e, o.ei].join('|');
+  if (!matCache.has(key)) {
+    const m = new THREE.MeshToonMaterial({ color, gradientMap: toonRamp });
+    if (o.op != null && o.op < 1) { m.transparent = true; m.opacity = o.op; m.depthWrite = false; }
+    if (o.e != null) { m.emissive = new THREE.Color(o.e); m.emissiveIntensity = o.ei ?? 0.9; }
+    matCache.set(key, m);
+  }
+  return matCache.get(key);
+}
+const M = (c, o) => (c && c.isMaterial) ? c : mat(c, o);
+const GLASS = { r: 0.05, op: 0.3 }, METAL = { r: 0.35, m: 0.7 }, GLOSS = { r: 0.3 };
+const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+const sphGeoCache = new Map();
+const sphGeo = r => { if (!sphGeoCache.has(r)) sphGeoCache.set(r, new THREE.SphereGeometry(r, 14, 10)); return sphGeoCache.get(r); };
+function shade(m, cast = true) { m.castShadow = cast; m.receiveShadow = true; return m; }
+function box(w, h, d, c, x = 0, y = 0, z = 0, o) {
+  const m = new THREE.Mesh(boxGeo, M(c, o)); m.scale.set(w, h, d); m.position.set(x, y, z); return shade(m);
+}
+function rbox(w, h, d, r, c, x = 0, y = 0, z = 0, o) {
+  const m = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 2, Math.min(r, w / 2, h / 2, d / 2)), M(c, o));
+  m.position.set(x, y, z); return shade(m);
+}
+function cyl(rt, rb, h, c, x = 0, y = 0, z = 0, o, seg = 14) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), M(c, o)); m.position.set(x, y, z); return shade(m);
+}
+function sph(r, c, x = 0, y = 0, z = 0, o) { const m = new THREE.Mesh(sphGeo(r), M(c, o)); m.position.set(x, y, z); return shade(m); }
+function capsule(r, len, c, x = 0, y = 0, z = 0) {
+  const m = new THREE.Mesh(new THREE.CapsuleGeometry(r, len, 4, 10), M(c)); m.position.set(x, y, z); return shade(m);
+}
+const B = (g, ...a) => { const m = box(...a); g.add(m); return m; };
+const R = (g, ...a) => { const m = rbox(...a); g.add(m); return m; };
+const C = (g, ...a) => { const m = cyl(...a); g.add(m); return m; };
+const S = (g, ...a) => { const m = sph(...a); g.add(m); return m; };
+
+// 그룹의 직속 메시들을 재질별로 하나로 합침 (모바일 성능용)
+function bake(group) {
+  const buckets = new Map();
+  for (const ch of [...group.children]) {
+    if (!ch.isMesh || ch.userData.keep) continue;
+    ch.updateMatrix();
+    const geo = ch.geometry.index ? ch.geometry.toNonIndexed() : ch.geometry.clone();
+    for (const k of Object.keys(geo.attributes)) if (!['position', 'normal', 'uv'].includes(k)) geo.deleteAttribute(k);
+    if (!geo.attributes.uv) geo.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(geo.attributes.position.count * 2), 2));
+    geo.applyMatrix4(ch.matrix);
+    const key = ch.material.uuid;
+    if (!buckets.has(key)) buckets.set(key, { mat: ch.material, geos: [], cast: false, meshes: [] });
+    const b = buckets.get(key); b.geos.push(geo); b.cast = b.cast || ch.castShadow; b.meshes.push(ch);
+  }
+  for (const b of buckets.values()) {
+    if (b.meshes.length < 2) continue;
+    const merged = mergeGeometries(b.geos);
+    if (!merged) continue;
+    for (const m of b.meshes) group.remove(m);
+    const mesh = new THREE.Mesh(merged, b.mat);
+    mesh.castShadow = b.cast && !b.mat.transparent; mesh.receiveShadow = true;
+    group.add(mesh);
+  }
+  return group;
+}
+
+// 만화풍 검은 외곽선: 메시를 살짝 부풀린 뒷면을 검게 그리는 방식 (화면상 두께 일정)
+const outlineGeoCache = new WeakMap();
+function outlineGeo(geo) {
+  let g = outlineGeoCache.get(geo);
+  if (g) return g;
+  const p = new THREE.BufferGeometry();
+  p.setAttribute('position', geo.attributes.position.clone());
+  if (geo.index) p.setIndex(geo.index.clone());
+  g = mergeVertices(p, 1e-3); g.computeVertexNormals();
+  outlineGeoCache.set(geo, g);
+  return g;
+}
+function makeOutlineMat(base) {
+  return new THREE.ShaderMaterial({
+    uniforms: { w: { value: base * tune.outline }, c: { value: new THREE.Color(0x1c1612) } },
+    side: THREE.BackSide,
+    // skinning 조각: 뼈대로 움직이는 3D 모델에서도 외곽선이 같이 움직이게 함 (도형 캐릭터에선 무시됨)
+    vertexShader: `uniform float w;
+      #include <skinning_pars_vertex>
+      void main() {
+        #include <beginnormal_vertex>
+        #include <skinbase_vertex>
+        #include <skinnormal_vertex>
+        #include <begin_vertex>
+        #include <skinning_vertex>
+        vec4 mv = modelViewMatrix * vec4(transformed, 1.0);
+        vec3 n = normalize(normalMatrix * objectNormal);
+        mv.xyz += n * w * (-mv.z) * 0.5;
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: `uniform vec3 c; void main() { gl_FragColor = vec4(c, 1.0); }`,
+  });
+}
+const OUTLINE = { char: { base: 0.0055 }, prop: { base: 0.0038 }, wall: { base: 0.003 } };
+for (const k in OUTLINE) OUTLINE[k].mat = makeOutlineMat(OUTLINE[k].base);
+function applyOutlineWidth() {
+  for (const k in OUTLINE) { OUTLINE[k].mat.uniforms.w.value = OUTLINE[k].base * tune.outline; OUTLINE[k].mat.visible = tune.outline > 0; }
+}
+function skipOutline(m) {
+  for (let o = m; o; o = o.parent) if (o.userData.noOutline) return true;
+  const mt = m.material;
+  return mt.transparent || mt.isMeshBasicMaterial || mt.isShaderMaterial || !!mt.map;
+}
+function outline(root, kind) {
+  const meshes = [];
+  root.traverse(o => { if (o.isMesh && !skipOutline(o)) meshes.push(o); });
+  for (const m of meshes) {
+    const ol = new THREE.Mesh(outlineGeo(m.geometry), OUTLINE[kind].mat);
+    ol.castShadow = false; ol.receiveShadow = false; ol.userData.noOutline = true;
+    m.add(ol);
+  }
+  return root;
+}
+
+/* =====================================================================
+   5. 캔버스 텍스처 (바닥, 창밖 풍경, 간판, 포스터)
+   ===================================================================== */
+function canvasTex(w, h, draw) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  return t;
+}
+function speckle(x, s, n, cols, a0, a1, sz = 2) {
+  for (let i = 0; i < n; i++) { x.fillStyle = `rgba(${pick(cols)},${rand(a0, a1)})`; x.fillRect(rand(0, s), rand(0, s), rand(1, sz), rand(1, sz)); }
+}
+function grid(x, s, step, color, lw = 2) {
+  x.strokeStyle = color; x.lineWidth = lw; x.beginPath();
+  for (let i = 0; i <= s; i += step) { x.moveTo(i, 0); x.lineTo(i, s); x.moveTo(0, i); x.lineTo(s, i); }
+  x.stroke();
+}
+// 각 텍스처는 4m x 4m 를 표현
+const FLOOR_DRAW = {
+  lab: (x, s) => { x.fillStyle = '#d3d9de'; x.fillRect(0, 0, s, s); speckle(x, s, 2200, ['70,80,95', '255,255,255', '130,140,150'], 0.1, 0.35); grid(x, s, s / 2, 'rgba(0,0,0,.07)'); },
+  marble: (x, s) => {
+    x.fillStyle = '#ece9e3'; x.fillRect(0, 0, s, s);
+    for (let i = 0; i < 14; i++) {
+      x.strokeStyle = `rgba(120,115,110,${rand(0.08, 0.25)})`; x.lineWidth = rand(0.5, 2); x.beginPath();
+      let px = rand(0, s), py = rand(0, s); x.moveTo(px, py);
+      for (let k = 0; k < 6; k++) { px += rand(-60, 60); py += rand(-60, 60); x.lineTo(px, py); }
+      x.stroke();
+    }
+    grid(x, s, s / 4, 'rgba(0,0,0,.08)', 1.5);
+  },
+  wood: (x, s) => {
+    const ph = s / 16;
+    for (let r = 0; r < 16; r++) {
+      const off = rand(0, s);
+      for (let k = -1; k < 3; k++) {
+        const base = pick(['#b98a5e', '#a97a50', '#c4966a', '#b0825a']);
+        x.fillStyle = base; x.fillRect(off + k * s / 2, r * ph, s / 2, ph);
+        x.fillStyle = 'rgba(0,0,0,.18)'; x.fillRect(off + k * s / 2, r * ph, 2, ph);
+      }
+      x.fillStyle = 'rgba(0,0,0,.15)'; x.fillRect(0, r * ph, s, 1.5);
+      for (let i = 0; i < 6; i++) { x.fillStyle = 'rgba(70,40,20,.08)'; x.fillRect(0, r * ph + rand(2, ph - 2), s, 1); }
+    }
+  },
+  tile: (x, s) => { x.fillStyle = '#e6dfd2'; x.fillRect(0, 0, s, s); speckle(x, s, 900, ['150,140,120', '255,255,255'], 0.08, 0.25); grid(x, s, s / 6, 'rgba(90,80,60,.18)', 2); },
+  carpet: (x, s) => { x.fillStyle = '#5f6e83'; x.fillRect(0, 0, s, s); speckle(x, s, 9000, ['40,50,65', '120,135,155', '90,100,120'], 0.15, 0.4, 1.6); grid(x, s, s / 8, 'rgba(0,0,0,.12)', 1.5); },
+  carpet2: (x, s) => { x.fillStyle = '#6e3f44'; x.fillRect(0, 0, s, s); speckle(x, s, 9000, ['50,20,25', '140,80,85', '100,50,55'], 0.15, 0.4, 1.6); grid(x, s, s / 8, 'rgba(0,0,0,.12)', 1.5); },
+  epoxy: (x, s) => { x.fillStyle = '#9fc9b6'; x.fillRect(0, 0, s, s); speckle(x, s, 1500, ['255,255,255', '60,110,90'], 0.06, 0.2); x.fillStyle = 'rgba(255,255,255,.12)'; x.fillRect(0, s * 0.3, s, s * 0.08); },
+  raised: (x, s) => {
+    x.fillStyle = '#b8bec6'; x.fillRect(0, 0, s, s); grid(x, s, s / 6, 'rgba(40,45,55,.45)', 3);
+    x.fillStyle = 'rgba(40,45,55,.3)';
+    for (let i = 0; i < 6; i++) for (let j = 0; j < 6; j++) if ((i + j) % 3 === 0) for (let a = 0; a < 5; a++) for (let b = 0; b < 5; b++) x.fillRect(i * s / 6 + 12 + a * 13, j * s / 6 + 12 + b * 13, 4, 4);
+  },
+  concrete: (x, s) => {
+    x.fillStyle = '#7d828a'; x.fillRect(0, 0, s, s); speckle(x, s, 4000, ['50,55,60', '160,165,170'], 0.1, 0.3, 3);
+    x.save(); x.translate(s / 2, s / 2); x.rotate(-0.3); x.fillStyle = 'rgba(255,210,0,.25)'; x.font = 'bold 40px sans-serif'; x.textAlign = 'center'; x.fillText('공사중', 0, 10); x.restore();
+  },
+};
+const floorMats = {};
+function floorMat(kind) {
+  if (!floorMats[kind]) floorMats[kind] = new THREE.MeshToonMaterial({ map: canvasTex(512, 512, (x, s) => FLOOR_DRAW[kind](x, s)), gradientMap: toonRamp });
+  return floorMats[kind];
+}
+const windowTex = canvasTex(256, 160, (x, w, h) => {
+  const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#8ec5ea'); g.addColorStop(1, '#e9f2f8');
+  x.fillStyle = g; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 18; i++) {
+    const bw = rand(14, 34), bh = rand(30, 110), bx = rand(-10, w), by = h - bh;
+    x.fillStyle = pick(['#7b8ea5', '#8fa2b8', '#6d7f96', '#9aaabf']); x.fillRect(bx, by, bw, bh);
+    x.fillStyle = 'rgba(255,255,230,.45)';
+    for (let yy = by + 4; yy < h - 4; yy += 7) for (let xx = bx + 3; xx < bx + bw - 3; xx += 6) if (Math.random() < 0.4) x.fillRect(xx, yy, 2, 3);
+  }
+  x.fillStyle = 'rgba(255,255,255,.18)'; x.fillRect(0, h - 25, w, 25);
+});
+function signTex(company, z) {
+  return canvasTex(512, 128, (x, w, h) => {
+    x.fillStyle = '#1f2937'; x.fillRect(0, 0, w, h);
+    x.fillStyle = z.color; x.fillRect(0, 0, 22, h);
+    x.fillStyle = 'rgba(255,255,255,.65)'; x.font = 'bold 24px sans-serif'; x.fillText(company, 44, 38);
+    let size = 54; const label = `${z.name}  ${z.en}`;
+    do { x.font = `bold ${size}px sans-serif`; size -= 4; } while (x.measureText(label).width > 440 && size > 20);
+    x.fillStyle = '#fff'; x.fillText(label, 44, 100);
+  });
+}
+function logoTex(company) {
+  return canvasTex(512, 200, (x, w, h) => {
+    const g = x.createLinearGradient(0, 0, w, 0); g.addColorStop(0, '#5a3b24'); g.addColorStop(0.5, '#7a5233'); g.addColorStop(1, '#5a3b24');
+    x.fillStyle = g; x.fillRect(0, 0, w, h);
+    for (let i = 0; i < 40; i++) { x.fillStyle = 'rgba(0,0,0,.06)'; x.fillRect(0, rand(0, h), w, 1); }
+    // 알약 엠블럼
+    x.save(); x.translate(90, 100); x.rotate(-0.6);
+    x.fillStyle = '#22c55e'; x.beginPath(); x.arc(-22, 0, 28, H, -H); x.lineTo(0, -28); x.lineTo(0, 28); x.fill();
+    x.fillStyle = '#f8fafc'; x.beginPath(); x.arc(22, 0, 28, -H, H); x.lineTo(0, 28); x.lineTo(0, -28); x.fill();
+    x.restore();
+    x.fillStyle = '#fff'; x.font = 'bold 54px sans-serif'; x.textBaseline = 'middle';
+    let size = 54; do { x.font = `bold ${size}px sans-serif`; size -= 3; } while (x.measureText(company).width > 330 && size > 18);
+    x.fillText(company, 150, 92);
+    x.fillStyle = 'rgba(255,255,255,.6)'; x.font = '18px sans-serif'; x.fillText('PHARMACEUTICAL CO., LTD.', 152, 140);
+  });
+}
+function posterTex(title, lines, color) {
+  return canvasTex(128, 180, (x, w, h) => {
+    x.fillStyle = '#fafaf9'; x.fillRect(0, 0, w, h);
+    x.fillStyle = color; x.fillRect(0, 0, w, 46);
+    x.fillStyle = '#fff'; x.font = 'bold 22px sans-serif'; x.textAlign = 'center'; x.fillText(title, w / 2, 31);
+    x.fillStyle = '#334155'; x.font = 'bold 14px sans-serif';
+    lines.forEach((l, i) => x.fillText(l, w / 2, 76 + i * 22));
+    x.strokeStyle = '#cbd5e1'; x.lineWidth = 3; x.strokeRect(2, 2, w - 4, h - 4);
+  });
+}
+function lockedTex(name) {
+  return canvasTex(256, 128, (x, w, h) => {
+    for (let i = -4; i < 12; i++) { x.fillStyle = i % 2 ? '#111' : '#facc15'; x.beginPath(); x.moveTo(i * 32, 0); x.lineTo(i * 32 + 32, 0); x.lineTo(i * 32 - 32 + 32, h); x.lineTo(i * 32 - 32, h); x.fill(); }
+    x.fillStyle = 'rgba(0,0,0,.8)'; x.fillRect(16, 24, w - 32, h - 48);
+    x.fillStyle = '#facc15'; x.font = 'bold 30px sans-serif'; x.textAlign = 'center'; x.fillText(name, w / 2, 62);
+    x.fillStyle = '#fff'; x.font = 'bold 18px sans-serif'; x.fillText('🚧 준비중', w / 2, 90);
+  });
+}
+const chartTex = canvasTex(256, 144, (x, w, h) => {
+  x.fillStyle = '#0f172a'; x.fillRect(0, 0, w, h);
+  x.fillStyle = '#e2e8f0'; x.font = 'bold 14px sans-serif'; x.fillText('3분기 매출 현황', 12, 22);
+  const vals = [40, 55, 48, 70, 92];
+  vals.forEach((v, i) => { x.fillStyle = i === 4 ? '#f97316' : '#38bdf8'; x.fillRect(24 + i * 44, h - 16 - v, 28, v); });
+  x.strokeStyle = '#facc15'; x.lineWidth = 3; x.beginPath(); vals.forEach((v, i) => x.lineTo(38 + i * 44, h - 26 - v)); x.stroke();
+});
+
+/* =====================================================================
+   6. 기물(프롭) 정의
+   ===================================================================== */
+const SCREENS = [0x60a5fa, 0x34d399, 0xa78bfa, 0xfbbf24, 0x93c5fd];
+const WORK = {
+  pc:     { label: 'PC 업무 중',     dur: 2.5, stress: 6,  msg: ['보고서 1건 완료', '메일 37통 답장 완료', '엑셀 정리 완료', '결재 상신 완료'] },
+  call:   { label: '고객 통화 중',   dur: 2.8, stress: 7,  msg: ['네 고객님~ 통화 완료', '주문 1건 수주!', '클레임 처리 완료...'] },
+  lab:    { label: '실험 중',        dur: 3,   stress: 7,  msg: ['실험 완료... 재현성은 모름', '시약 조제 완료', '버퍼 만들기 완료'] },
+  hplc:   { label: '시료 분석 중',   dur: 3,   stress: 8,  msg: ['분석 완료! ...근데 OOS', '시스템 적합성 통과!', '피크 분리 실패 ㅠ'] },
+  gc:     { label: 'GC 분석 중',     dur: 3,   stress: 8,  msg: ['잔류용매 분석 완료', '헬륨 아껴 쓰세요!'] },
+  diss:   { label: '용출 시험 중',   dur: 3.2, stress: 8,  msg: ['용출 시험 6시간... 완료'] },
+  bal:    { label: '칭량 중',        dur: 2,   stress: 5,  msg: ['칭량 완료 (0.1mg 오차)', '정전기 때문에 다시...'] },
+  bsc:    { label: '세포 배양 중',   dur: 3,   stress: 7,  msg: ['계대 배양 완료', '오염 없음! (아마도)'] },
+  micro:  { label: '현미경 관찰 중', dur: 2.2, stress: 5,  msg: ['세포 상태 양호', '이게... 뭐지?'] },
+  uv:     { label: 'UV 측정 중',     dur: 2,   stress: 5,  msg: ['흡광도 측정 완료'] },
+  coffee: { label: '커피 내리는 중', dur: 2,   stress: -6, msg: ['커피 수혈 완료 ☕'], sound: 'slurp' },
+  vend:   { label: '음료 뽑는 중',   dur: 1.2, stress: -3, msg: ['캔커피 획득! (-1,500원)', '당 충전 완료'] },
+  nmr:    { label: 'NMR 측정 중',    dur: 3.5, stress: 9,  msg: ['스펙트럼 해석 불가...', '헬륨 레벨 정상'] },
+  ms:     { label: '질량 분석 중',   dur: 3.2, stress: 9,  msg: ['분자량 확인 완료!', '이 피크 뭐지...?'] },
+  icp:    { label: '금속 분석 중',   dur: 3,   stress: 8,  msg: ['중금속 불검출!', '토치 꺼졌어요 ㅠ'] },
+  ir:     { label: 'IR 측정 중',     dur: 2,   stress: 5,  msg: ['확인시험 적합', '배경 다시 찍기...'] },
+  kf:     { label: '수분 측정 중',   dur: 2,   stress: 5,  msg: ['수분 0.3% 적합', '시약 또 갈아야 해'] },
+  titr:   { label: '적정 중',        dur: 2.4, stress: 6,  msg: ['종말점 도달!', 'pH 미터 교정 완료'] },
+  pcr:    { label: 'PCR 돌리는 중',  dur: 2.6, stress: 6,  msg: ['밴드 나왔다!', '프라이머 다이머...'] },
+  toc:    { label: 'TOC 측정 중',    dur: 2.2, stress: 5,  msg: ['정제수 적합', '총유기탄소 기준 이내'] },
+  tab:    { label: '정제 시험 중',   dur: 2.4, stress: 6,  msg: ['경도 적합', '붕해 시간 OK', '마손도 0.2%'] },
+  glove:  { label: '글러브박스 작업 중', dur: 2.8, stress: 7, msg: ['무산소 작업 완료', '장갑 구멍 났어요!'] },
+  press:  { label: '타정기 운전 중', dur: 3,   stress: 7,  msg: ['정제 1만 정 생산!', '펀치 교체 완료'] },
+  pack:   { label: '포장 라인 점검 중', dur: 2.6, stress: 6, msg: ['블리스터 실링 OK', '라벨 비뚤어짐...'] },
+  server: { label: '서버 점검 중',   dur: 2.5, stress: 6,  msg: ['재부팅 완료', '로그 4만 줄 확인...'] },
+  game:   { label: '오락 중',        dur: 2.4, stress: -6, msg: ['최고 점수 갱신!', '게임 오버...'] },
+  massage: { label: '안마 받는 중',  dur: 3,   stress: -9, msg: ['어깨가 풀렸다~', '잠들 뻔했다'] },
+  pong:   { label: '탁구 치는 중',   dur: 2.4, stress: -5, msg: ['스매시!', '공 잃어버렸다'] },
+};
+function monitor(g, x, z, y = 0.76, s = 1) {
+  B(g, 0.2 * s, 0.015, 0.15 * s, 0x2a2a2a, x, y + 0.008, z);
+  B(g, 0.03, 0.2 * s, 0.03, 0x2a2a2a, x, y + 0.1 * s, z - 0.02);
+  R(g, 0.58 * s, 0.35 * s, 0.03, 0.01, 0x1c1c1c, x, y + 0.31 * s, z);
+  B(g, 0.54 * s, 0.31 * s, 0.006, 0x111827, x, y + 0.31 * s, z + 0.017, { e: pick(SCREENS), ei: 0.8 });
+}
+function table(g, w, d, h, top, leg = 0x6b7280) {
+  R(g, w, 0.04, d, 0.01, top, 0, h - 0.02, 0);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) B(g, 0.04, h - 0.04, 0.04, leg, sx * (w / 2 - 0.05), (h - 0.04) / 2, sz * (d / 2 - 0.05));
+}
+function bottle(g, x, y, z, c, h = 0.14) {
+  C(g, 0.03, 0.034, h, c, x, y + h / 2, z, { r: 0.2, op: 0.75 });
+  C(g, 0.016, 0.016, 0.03, 0x222222, x, y + h + 0.015, z);
+}
+function glassware(g, x, y, z) {
+  const liq = pick([0x7fdbff, 0xff6b9d, 0xb7f77f, 0xffd166, 0xc4b5fd]);
+  if (Math.random() < 0.5) { C(g, 0.045, 0.045, 0.12, 0xdbeafe, x, y + 0.06, z, GLASS); C(g, 0.04, 0.04, 0.06, liq, x, y + 0.03, z, { op: 0.8 }); }
+  else { C(g, 0.02, 0.07, 0.14, 0xdbeafe, x, y + 0.07, z, GLASS); C(g, 0.035, 0.065, 0.05, liq, x, y + 0.025, z, { op: 0.8 }); }
+}
+function cabinetBase(g, w, d, h, c, top) {
+  R(g, w, h, d, 0.02, c, 0, h / 2, 0);
+  for (let i = 0; i < Math.round(w / 0.5); i++) B(g, 0.14, 0.02, 0.02, 0x9ca3af, -w / 2 + 0.25 + i * 0.5, h - 0.12, d / 2 + 0.01);
+  if (top != null) B(g, w + 0.04, 0.04, d + 0.04, top, 0, h + 0.02, 0);
+}
+
+const PROPS = {
+  desk: { name: '업무용 책상', w: 1.6, d: 0.8, hp: 3, value: 1500000, mass: 3, snd: 'wood', work: WORK.pc, build(g) {
+    R(g, 1.6, 0.04, 0.8, 0.01, 0xc9a27a, 0, 0.74, 0);
+    B(g, 0.04, 0.72, 0.74, 0x6b7280, -0.76, 0.36, 0); B(g, 0.04, 0.72, 0.74, 0x6b7280, 0.76, 0.36, 0);
+    B(g, 1.48, 0.42, 0.02, 0x6b7280, 0, 0.5, -0.36);
+    monitor(g, 0, -0.22);
+    B(g, 0.44, 0.018, 0.14, 0x2b2b2b, 0, 0.77, 0.08); B(g, 0.06, 0.02, 0.1, 0x2b2b2b, 0.32, 0.77, 0.1);
+    B(g, 0.22, 0.006, 0.3, 0xffffff, -0.52, 0.765, 0.02); B(g, 0.22, 0.006, 0.3, 0xf1f5f9, -0.5, 0.772, 0.05);
+    C(g, 0.04, 0.035, 0.1, pick([0xffffff, 0xfca5a5, 0x93c5fd, 0xfde68a]), 0.55, 0.81, 0.12);
+  }},
+  cubicle: { name: '파티션 책상', w: 1.7, d: 0.9, hp: 3, value: 1800000, mass: 3, snd: 'wood', work: WORK.call, build(g) {
+    R(g, 1.6, 0.04, 0.75, 0.01, 0xe7dccb, 0, 0.74, 0.05);
+    B(g, 0.04, 0.72, 0.7, 0x9ca3af, -0.76, 0.36, 0.05); B(g, 0.04, 0.72, 0.7, 0x9ca3af, 0.76, 0.36, 0.05);
+    R(g, 1.7, 1.2, 0.06, 0.02, 0x7d8ea3, 0, 0.6, -0.4);
+    B(g, 1.72, 0.04, 0.08, 0x4b5563, 0, 1.21, -0.4);
+    R(g, 0.06, 1.05, 0.8, 0.02, 0x7d8ea3, -0.83, 0.525, 0.02);
+    monitor(g, -0.1, -0.15); monitor(g, 0.48, -0.12, 0.76, 0.85);
+    B(g, 0.44, 0.018, 0.14, 0x2b2b2b, -0.1, 0.77, 0.15);
+    R(g, 0.18, 0.06, 0.2, 0.02, 0x1f2937, -0.6, 0.79, 0.05); // 전화기
+    B(g, 0.2, 0.05, 0.03, 0xfacc15, 0.55, 0.785, 0.32); // 명패
+    for (let i = 0; i < 3; i++) B(g, 0.22, 0.006, 0.3, 0xffffff, 0.45, 0.765 + i * 0.006, 0.18);
+    B(g, 0.12, 0.16, 0.005, pick([0xfde68a, 0xfca5a5, 0x93c5fd]), -0.3, 0.95, -0.365); // 포스트잇
+  }},
+  exec_desk: { name: '차장님 책상', w: 2, d: 0.95, hp: 4, value: 3500000, mass: 5, snd: 'wood', work: WORK.pc, build(g) {
+    R(g, 2, 0.06, 0.95, 0.02, 0x5b3a26, 0, 0.75, 0, GLOSS);
+    R(g, 0.5, 0.72, 0.85, 0.02, 0x4a2f1f, -0.72, 0.36, 0); R(g, 0.5, 0.72, 0.85, 0.02, 0x4a2f1f, 0.72, 0.36, 0);
+    B(g, 1.0, 0.5, 0.03, 0x4a2f1f, 0, 0.45, -0.4);
+    monitor(g, 0, -0.25, 0.78, 1.15);
+    B(g, 0.32, 0.07, 0.05, 0xd4a017, 0.6, 0.82, 0.3, METAL);
+    C(g, 0.06, 0.06, 0.02, 0xd4a017, -0.7, 0.79, 0.2, METAL); B(g, 0.02, 0.25, 0.02, 0xd4a017, -0.7, 0.92, 0.2, METAL); // 골프 트로피
+    S(g, 0.04, 0xffffff, -0.7, 1.06, 0.2);
+  }},
+  chair: { name: '사무용 의자', w: 0.6, d: 0.6, hp: 2, value: 350000, mass: 0.6, snd: 'plastic', build(g) {
+    for (let i = 0; i < 5; i++) { const a = i / 5 * PI * 2; const m = B(g, 0.3, 0.03, 0.05, 0x222222, Math.sin(a) * 0.14, 0.05, Math.cos(a) * 0.14); m.rotation.y = a + H; }
+    C(g, 0.025, 0.025, 0.38, 0x666666, 0, 0.25, 0, METAL);
+    R(g, 0.5, 0.08, 0.48, 0.03, 0x2d3748, 0, 0.47, 0);
+    R(g, 0.46, 0.55, 0.07, 0.03, 0x2d3748, 0, 0.82, 0.22);
+  }},
+  exec_chair: { name: '가죽 의자', w: 0.7, d: 0.7, hp: 3, value: 1200000, mass: 1, snd: 'plastic', build(g) {
+    for (let i = 0; i < 5; i++) { const a = i / 5 * PI * 2; const m = B(g, 0.34, 0.03, 0.05, 0x333333, Math.sin(a) * 0.16, 0.05, Math.cos(a) * 0.16, METAL); m.rotation.y = a + H; }
+    C(g, 0.03, 0.03, 0.38, 0x666666, 0, 0.25, 0, METAL);
+    R(g, 0.58, 0.12, 0.55, 0.05, 0x1a1a1a, 0, 0.49, 0, GLOSS);
+    R(g, 0.56, 0.8, 0.12, 0.05, 0x1a1a1a, 0, 0.95, 0.24, GLOSS);
+  }},
+  stool: { name: '실험실 의자', w: 0.45, d: 0.45, hp: 1, value: 150000, mass: 0.5, snd: 'metal', build(g) {
+    C(g, 0.2, 0.2, 0.03, 0x334155, 0, 0.03, 0, METAL); C(g, 0.025, 0.025, 0.6, 0x9ca3af, 0, 0.32, 0, METAL);
+    C(g, 0.19, 0.19, 0.06, 0x1e293b, 0, 0.64, 0);
+  }},
+  lab_bench: { name: '실험대', w: 3, d: 1.3, hp: 4, value: 3500000, mass: 5, snd: 'glass', work: WORK.lab, build(g) {
+    cabinetBase(g, 3, 1.2, 0.86, 0xeef0f2, null);
+    B(g, 3.06, 0.05, 1.3, 0x2b2b2b, 0, 0.885, 0, GLOSS);
+    for (const x of [-1.4, 1.4]) C(g, 0.02, 0.02, 0.75, 0x9ca3af, x, 1.28, -0.45, METAL);
+    B(g, 2.9, 0.03, 0.3, 0xe5e7eb, 0, 1.45, -0.45);
+    for (let i = 0; i < 9; i++) bottle(g, -1.3 + i * 0.32, 1.465, -0.45, pick([0x92400e, 0xe0f2fe, 0x1e3a8a, 0xfef3c7]));
+    for (let i = 0; i < 6; i++) glassware(g, rand(-1.3, 1.3), 0.91, rand(-0.1, 0.4));
+    B(g, 0.3, 0.02, 0.2, 0x60a5fa, rand(-1, 1), 0.92, 0.35); // 피펫팁 박스
+  }},
+  micro_bench: { name: '현미경', w: 2, d: 0.8, hp: 3, value: 12000000, mass: 3, snd: 'glass', work: WORK.micro, build(g) {
+    table(g, 2, 0.8, 0.88, 0xe5e7eb);
+    R(g, 0.25, 0.05, 0.3, 0.02, 0x1f2937, -0.3, 0.9, 0);
+    R(g, 0.06, 0.32, 0.08, 0.02, 0x1f2937, -0.3, 1.08, -0.1);
+    const t = C(g, 0.03, 0.03, 0.22, 0x111827, -0.3, 1.22, 0.02); t.rotation.x = 0.4;
+    B(g, 0.18, 0.02, 0.15, 0x374151, -0.3, 1.0, 0.03);
+    R(g, 0.35, 0.02, 0.25, 0.01, 0x9ca3af, 0.45, 0.9, 0.1, METAL); B(g, 0.35, 0.22, 0.01, 0x111827, 0.45, 1.01, -0.02, { e: 0x22d3ee, ei: 0.5 }); // 노트북
+  }},
+  hplc: { name: 'HPLC (LC)', w: 1.8, d: 0.8, hp: 6, value: 150000000, mass: 8, snd: 'electronic', work: WORK.hplc, build(g) {
+    table(g, 1.8, 0.8, 0.85, 0xd1d5db);
+    let y = 0.87;
+    for (const [h, kind] of [[0.2, 'det'], [0.17, 'col'], [0.27, 'as'], [0.2, 'pump'], [0.08, 'deg']]) {
+      R(g, 0.46, h - 0.008, 0.56, 0.012, 0xe8eaed, -0.35, y + h / 2, 0);
+      B(g, 0.42, h * 0.55, 0.01, kind === 'as' ? 0x1f2937 : 0xcfd3d8, -0.35, y + h / 2, 0.282, kind === 'as' ? GLASS : undefined);
+      B(g, 0.03, 0.015, 0.01, 0x22c55e, -0.52, y + h - 0.03, 0.285, { e: 0x22c55e, ei: 1.5 });
+      y += h;
+    }
+    B(g, 0.46, 0.08, 0.5, 0xd1d5db, -0.35, y + 0.04, 0);
+    for (let i = 0; i < 4; i++) bottle(g, -0.5 + i * 0.1, y + 0.08, 0, i === 1 ? 0xb45309 : 0xe0f2fe, 0.18);
+    monitor(g, 0.45, -0.1, 0.87);
+    B(g, 0.4, 0.015, 0.13, 0x2b2b2b, 0.45, 0.88, 0.22);
+    B(g, 0.2, 0.25, 0.18, 0xf1f5f9, 0.1, 0.995, 0.15); // 바이알 트레이
+  }},
+  gc: { name: 'GC 가스크로마토그래프', w: 1.7, d: 0.8, hp: 6, value: 100000000, mass: 8, snd: 'electronic', work: WORK.gc, build(g) {
+    table(g, 1.7, 0.8, 0.85, 0xd1d5db);
+    R(g, 0.7, 0.52, 0.6, 0.02, 0xdfe6ee, -0.3, 1.13, 0);
+    B(g, 0.712, 0.06, 0.612, 0x2563eb, -0.3, 1.3, 0);
+    const door = C(g, 0.18, 0.18, 0.04, 0xcbd5e1, -0.38, 1.1, 0.31); door.rotation.x = H;
+    C(g, 0.1, 0.1, 0.02, 0x64748b, -0.38, 1.1, 0.335).rotation.x = H;
+    C(g, 0.03, 0.03, 0.12, 0x9ca3af, -0.4, 1.45, -0.05, METAL); C(g, 0.03, 0.03, 0.12, 0x9ca3af, -0.25, 1.45, -0.05, METAL);
+    C(g, 0.09, 0.09, 0.36, 0xe2e8f0, -0.12, 1.57, 0.05); C(g, 0.11, 0.11, 0.03, 0x1f2937, -0.12, 1.75, 0.05);
+    B(g, 0.15, 0.08, 0.01, 0x111827, -0.08, 1.2, 0.305, { e: 0x22c55e, ei: 0.8 });
+    monitor(g, 0.45, -0.1, 0.87);
+  }},
+  gas_cyl: { name: '가스 실린더', w: 0.3, d: 0.3, hp: 2, value: 300000, mass: 3, snd: 'metal', special: 'rocket', build(g, opt = {}) {
+    const c = opt.color ?? 0x9ca3af;
+    C(g, 0.12, 0.12, 1.25, c, 0, 0.625, 0, { r: 0.4, m: 0.3 }); S(g, 0.12, c, 0, 1.25, 0, { r: 0.4, m: 0.3 });
+    C(g, 0.04, 0.05, 0.14, 0x777777, 0, 1.4, 0, METAL); B(g, 0.12, 0.03, 0.03, 0x111111, 0, 1.44, 0);
+    C(g, 0.121, 0.121, 0.18, 0xffffff, 0, 0.95, 0);
+  }},
+  uv: { name: 'UV-Vis 분광광도계', w: 1, d: 0.7, hp: 3, value: 15000000, mass: 3, snd: 'electronic', work: WORK.uv, build(g) {
+    table(g, 1, 0.7, 0.85, 0xd1d5db);
+    R(g, 0.6, 0.22, 0.42, 0.03, 0xf1f5f9, -0.1, 0.98, 0);
+    R(g, 0.25, 0.04, 0.2, 0.02, 0x64748b, -0.05, 1.11, -0.02);
+    B(g, 0.15, 0.1, 0.01, 0x111827, -0.25, 0.99, 0.215, { e: 0x60a5fa, ei: 0.7 });
+    for (let i = 0; i < 3; i++) B(g, 0.025, 0.06, 0.025, 0xdbeafe, 0.32 + i * 0.04, 0.9, 0.1, GLASS);
+  }},
+  dissolution: { name: '용출시험기', w: 1.6, d: 0.8, hp: 5, value: 80000000, mass: 6, snd: 'glass', work: WORK.diss, build(g) {
+    table(g, 1.6, 0.8, 0.75, 0xd1d5db);
+    R(g, 1.4, 0.12, 0.6, 0.02, 0xe5e7eb, 0, 0.83, 0);
+    B(g, 1.3, 0.3, 0.5, 0x7dd3fc, 0, 1.04, 0, { r: 0.05, op: 0.35 });
+    for (let i = 0; i < 6; i++) {
+      const x = -0.45 + (i % 3) * 0.45, z = i < 3 ? -0.12 : 0.12;
+      C(g, 0.075, 0.075, 0.3, 0xffffff, x, 1.08, z, GLASS);
+      C(g, 0.008, 0.008, 0.45, 0x9ca3af, x, 1.3, z, METAL);
+    }
+    for (const x of [-0.65, 0.65]) C(g, 0.03, 0.03, 0.45, 0x9ca3af, x, 1.3, 0, METAL);
+    R(g, 1.45, 0.14, 0.55, 0.03, 0xf8fafc, 0, 1.52, 0);
+    B(g, 0.3, 0.07, 0.01, 0x111827, 0, 1.52, 0.28, { e: 0x34d399, ei: 0.7 });
+  }},
+  balance: { name: '정밀저울', w: 1.2, d: 0.7, hp: 3, value: 20000000, mass: 6, snd: 'glass', work: WORK.bal, build(g) {
+    for (const x of [-0.5, 0.5]) B(g, 0.12, 0.74, 0.6, 0x4b5563, x, 0.37, 0);
+    B(g, 1.2, 0.08, 0.7, 0x27272a, 0, 0.78, 0, GLOSS);
+    R(g, 0.24, 0.08, 0.34, 0.02, 0xf1f5f9, -0.15, 0.86, 0);
+    B(g, 0.22, 0.24, 0.22, 0xe0f2fe, -0.15, 1.02, -0.03, GLASS);
+    B(g, 0.12, 0.03, 0.01, 0x111827, -0.15, 0.87, 0.171, { e: 0x22c55e, ei: 1 });
+    B(g, 0.15, 0.08, 0.1, 0xf8fafc, 0.3, 0.86, 0); // 칭량지
+  }},
+  stability: { name: '안정성 챔버', w: 1.2, d: 0.8, hp: 5, value: 30000000, mass: 9, snd: 'metal', build(g) {
+    R(g, 1.2, 1.95, 0.8, 0.03, 0xf1f5f9, 0, 0.975, 0);
+    B(g, 0.01, 1.7, 0.01, 0x9ca3af, 0, 1.0, 0.405);
+    B(g, 0.45, 0.9, 0.01, 0x1e293b, -0.28, 1.15, 0.405, GLASS); B(g, 0.45, 0.9, 0.01, 0x1e293b, 0.28, 1.15, 0.405, GLASS);
+    B(g, 0.22, 0.08, 0.01, 0x111827, 0, 1.78, 0.41, { e: 0xef4444, ei: 0.9 });
+    B(g, 0.03, 0.3, 0.04, 0x9ca3af, -0.05, 1.1, 0.42, METAL); B(g, 0.03, 0.3, 0.04, 0x9ca3af, 0.05, 1.1, 0.42, METAL);
+  }},
+  fume_hood: { name: '흄후드', w: 2.4, d: 1, hp: 6, value: 40000000, mass: 10, snd: 'glass', build(g) {
+    cabinetBase(g, 2.4, 1, 0.88, 0xcfd6dc, 0x2b2b2b);
+    B(g, 0.1, 1.15, 1, 0xb8c0c8, -1.15, 1.48, 0); B(g, 0.1, 1.15, 1, 0xb8c0c8, 1.15, 1.48, 0);
+    B(g, 2.2, 0.05, 1, 0xb8c0c8, 0, 2.05, 0); R(g, 2.4, 0.45, 1, 0.02, 0xcfd6dc, 0, 2.3, 0);
+    B(g, 2.2, 0.03, 0.03, 0xffffff, 0, 2.0, 0, { e: 0xffffff, ei: 1.2 });
+    B(g, 2.2, 0.7, 0.03, 0x9fd8ff, 0, 1.6, 0.45, GLASS);
+    for (let i = 0; i < 3; i++) glassware(g, rand(-0.8, 0.8), 0.92, rand(-0.2, 0.2));
+    C(g, 0.18, 0.18, 0.3, 0x9ca3af, 0.6, 2.67, -0.2, METAL);
+  }},
+  bsc: { name: '클린벤치', w: 1.8, d: 0.8, hp: 5, value: 35000000, mass: 8, snd: 'glass', work: WORK.bsc, build(g) {
+    for (const x of [-0.8, 0.8]) B(g, 0.08, 0.8, 0.7, 0x9ca3af, x, 0.4, 0, METAL);
+    R(g, 1.8, 0.1, 0.8, 0.02, 0xd1d5db, 0, 0.85, 0, METAL);
+    B(g, 0.06, 0.8, 0.8, 0xd1d5db, -0.87, 1.3, 0, METAL); B(g, 0.06, 0.8, 0.8, 0xd1d5db, 0.87, 1.3, 0, METAL);
+    R(g, 1.8, 0.4, 0.8, 0.02, 0xd1d5db, 0, 1.9, 0, METAL);
+    B(g, 1.7, 0.03, 0.6, 0x818cf8, 0, 1.69, 0, { e: 0x6366f1, ei: 1.2 });
+    B(g, 1.7, 0.55, 0.02, 0xc7d2fe, 0, 1.4, 0.38, GLASS);
+    for (let i = 0; i < 4; i++) C(g, 0.05, 0.05, 0.02, 0xfca5a5, -0.5 + i * 0.25, 0.91, 0.05, { op: 0.8 });
+  }},
+  reagent_cab: { name: '시약장', w: 1.2, d: 0.55, hp: 3, value: 1500000, mass: 4, snd: 'glass', build(g) {
+    R(g, 1.2, 1.9, 0.55, 0.02, 0x93a3b0, 0, 0.95, 0);
+    for (let s = 0; s < 4; s++) {
+      B(g, 1.1, 0.02, 0.45, 0xe5e7eb, 0, 0.3 + s * 0.42, 0.02);
+      for (let i = 0; i < 6; i++) bottle(g, -0.45 + i * 0.18, 0.31 + s * 0.42, 0.05, pick([0x92400e, 0xe0f2fe, 0x1e3a8a, 0xfef3c7, 0x065f46]), 0.16);
+    }
+    B(g, 1.12, 1.8, 0.02, 0xdbeafe, 0, 0.98, 0.28, GLASS);
+    B(g, 0.3, 0.08, 0.01, 0xfacc15, 0, 1.8, 0.29);
+  }},
+  incubator: { name: 'CO₂ 인큐베이터', w: 0.8, d: 0.75, hp: 4, value: 25000000, mass: 6, snd: 'metal', build(g) {
+    for (const y of [0.42, 1.24]) {
+      R(g, 0.8, 0.8, 0.75, 0.03, 0xe5e7eb, 0, y, 0);
+      B(g, 0.12, 0.06, 0.01, 0x111827, 0.22, y + 0.28, 0.38, { e: 0x22c55e, ei: 1 });
+      B(g, 0.03, 0.4, 0.04, 0x9ca3af, -0.3, y, 0.39, METAL);
+    }
+  }},
+  freezer80: { name: '-80℃ 초저온 냉동고', w: 0.9, d: 0.85, hp: 5, value: 30000000, mass: 9, snd: 'metal', build(g) {
+    R(g, 0.9, 1.95, 0.85, 0.03, 0xf8fafc, 0, 0.975, 0);
+    B(g, 0.25, 0.1, 0.01, 0x111827, 0, 1.75, 0.43, { e: 0xef4444, ei: 1.2 });
+    B(g, 0.05, 0.5, 0.05, 0x64748b, 0.35, 1.2, 0.44, METAL);
+    B(g, 0.8, 0.12, 0.01, 0x64748b, 0, 0.12, 0.43);
+  }},
+  autoclave: { name: '고압멸균기', w: 1, d: 0.9, hp: 5, value: 20000000, mass: 9, snd: 'metal', build(g) {
+    R(g, 1, 1.1, 0.9, 0.04, 0xcbd5e1, 0, 0.55, 0, METAL);
+    const t = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.05, 8, 20), mat(0x94a3b8, METAL)); t.position.set(0, 0.6, 0.46); g.add(shade(t));
+    C(g, 0.25, 0.25, 0.03, 0x64748b, 0, 0.6, 0.46, METAL).rotation.x = H;
+    C(g, 0.07, 0.07, 0.03, 0xffffff, 0.35, 0.95, 0.46).rotation.x = H;
+  }},
+  centrifuge: { name: '원심분리기', w: 0.8, d: 0.8, hp: 4, value: 25000000, mass: 4, snd: 'metal', build(g) {
+    R(g, 0.8, 0.7, 0.8, 0.06, 0xf0f0f0, 0, 0.35, 0);
+    C(g, 0.3, 0.3, 0.06, 0x5c7cfa, 0, 0.72, 0);
+    B(g, 0.3, 0.1, 0.01, 0x111827, 0, 0.5, 0.405, { e: 0x60a5fa, ei: 0.8 });
+  }},
+  printer: { name: '복합기', w: 1.1, d: 0.8, hp: 3, value: 4000000, mass: 4, snd: 'plastic', build(g) {
+    R(g, 1.1, 0.9, 0.8, 0.03, 0xe5e7eb, 0, 0.45, 0);
+    R(g, 1.1, 0.14, 0.8, 0.03, 0x4b5563, 0, 0.97, 0);
+    B(g, 0.6, 0.03, 0.35, 0xffffff, 0, 0.62, 0.45);
+    B(g, 0.2, 0.08, 0.01, 0x111827, 0.3, 0.98, 0.41, { e: 0x60a5fa, ei: 0.8 });
+  }},
+  shredder: { name: '문서 세단기', w: 0.5, d: 0.4, hp: 2, value: 400000, mass: 2, snd: 'plastic', build(g) {
+    R(g, 0.5, 0.7, 0.4, 0.03, 0x1f2937, 0, 0.35, 0); B(g, 0.3, 0.01, 0.02, 0x000000, 0, 0.705, 0);
+  }},
+  water: { name: '정수기', w: 0.5, d: 0.5, hp: 2, value: 600000, mass: 1.5, snd: 'glass', build(g) {
+    R(g, 0.5, 1, 0.5, 0.04, 0xffffff, 0, 0.5, 0);
+    C(g, 0.2, 0.2, 0.45, 0x6ec6ff, 0, 1.24, 0, { r: 0.1, op: 0.55 });
+    B(g, 0.06, 0.04, 0.06, 0xef4444, -0.08, 0.75, 0.26); B(g, 0.06, 0.04, 0.06, 0x3b82f6, 0.08, 0.75, 0.26);
+  }},
+  plant_big: { name: '대형 화분', w: 0.6, d: 0.6, hp: 1, value: 80000, mass: 1, snd: 'plant', build(g) {
+    C(g, 0.24, 0.18, 0.45, 0xe7e5e4, 0, 0.225, 0);
+    C(g, 0.025, 0.03, 0.6, 0x6b4f2a, 0, 0.75, 0);
+    for (let i = 0; i < 7; i++) {
+      const a = i / 7 * PI * 2, l = S(g, 0.22, pick([0x2f855a, 0x38a169, 0x276749]), Math.cos(a) * 0.2, rand(0.85, 1.3), Math.sin(a) * 0.2);
+      l.scale.set(1, 0.35, 0.6); l.rotation.y = -a; l.rotation.z = 0.4;
+    }
+  }},
+  plant_small: { name: '화분', w: 0.4, d: 0.4, hp: 1, value: 30000, mass: 0.5, snd: 'plant', build(g) {
+    C(g, 0.16, 0.12, 0.3, 0x9a5b34, 0, 0.15, 0);
+    const l = new THREE.Mesh(new THREE.IcosahedronGeometry(0.25, 0), mat(0x3fa34d)); l.position.y = 0.5; g.add(shade(l));
+  }},
+  whiteboard: { name: '화이트보드', w: 2, d: 0.3, hp: 2, value: 500000, mass: 2, snd: 'plastic', build(g) {
+    R(g, 2, 1.2, 0.05, 0.01, 0xffffff, 0, 1.4, 0, GLOSS);
+    B(g, 1.2, 0.03, 0.01, 0x3b82f6, -0.2, 1.65, 0.03); B(g, 0.8, 0.03, 0.01, 0xef4444, -0.4, 1.45, 0.03); B(g, 1.0, 0.03, 0.01, 0x111827, 0, 1.25, 0.03);
+    for (const x of [-0.9, 0.9]) { B(g, 0.05, 0.85, 0.05, 0x9ca3af, x, 0.42, 0, METAL); B(g, 0.05, 0.03, 0.5, 0x9ca3af, x, 0.03, 0, METAL); }
+  }},
+  sales_board: { name: '실적 현황판', w: 2, d: 0.3, hp: 2, value: 600000, mass: 2, snd: 'plastic', build(g) {
+    R(g, 2, 1.2, 0.05, 0.01, 0xffffff, 0, 1.4, 0, GLOSS);
+    const vals = [0.3, 0.45, 0.38, 0.6, 0.85];
+    vals.forEach((v, i) => B(g, 0.2, v, 0.01, i === 4 ? 0xf97316 : 0x3b82f6, -0.6 + i * 0.3, 0.88 + v / 2, 0.03));
+    B(g, 1.6, 0.04, 0.01, 0xef4444, 0, 1.85, 0.03);
+    for (const x of [-0.9, 0.9]) { B(g, 0.05, 0.85, 0.05, 0x9ca3af, x, 0.42, 0, METAL); B(g, 0.05, 0.03, 0.5, 0x9ca3af, x, 0.03, 0, METAL); }
+  }},
+  cabinet: { name: '서류 캐비닛', w: 0.9, d: 0.6, hp: 3, value: 700000, mass: 4, snd: 'metal', build(g) {
+    R(g, 0.9, 1.3, 0.6, 0.02, 0x9aa3ad, 0, 0.65, 0, { r: 0.5, m: 0.3 });
+    for (let i = 0; i < 4; i++) { B(g, 0.84, 0.005, 0.01, 0x6b7280, 0, 0.32 + i * 0.32, 0.305); B(g, 0.2, 0.03, 0.03, 0x4b5563, 0, 0.2 + i * 0.32, 0.31); }
+  }},
+  trophy: { name: '트로피 진열장', w: 1.4, d: 0.5, hp: 3, value: 2000000, mass: 4, snd: 'glass', build(g) {
+    R(g, 1.4, 1.8, 0.5, 0.02, 0x3f2a1d, 0, 0.9, 0);
+    for (let s = 0; s < 3; s++) {
+      B(g, 1.3, 0.02, 0.4, 0xd6d3d1, 0, 0.5 + s * 0.45, 0.02);
+      for (let i = 0; i < 3; i++) { const x = -0.4 + i * 0.4, y = 0.51 + s * 0.45; C(g, 0.06, 0.04, 0.03, 0xd4a017, x, y + 0.015, 0.05, METAL); C(g, 0.015, 0.015, 0.1, 0xd4a017, x, y + 0.08, 0.05, METAL); C(g, 0.07, 0.03, 0.1, 0xd4a017, x, y + 0.18, 0.05, METAL); }
+    }
+    B(g, 1.32, 1.6, 0.02, 0xdbeafe, 0, 0.95, 0.25, GLASS);
+  }},
+  sofa: { name: '소파', w: 2, d: 0.85, hp: 3, value: 1500000, mass: 4, snd: 'plastic', build(g, opt = {}) {
+    const c = opt.color ?? 0x475569;
+    R(g, 2, 0.4, 0.85, 0.08, c, 0, 0.25, 0); R(g, 2, 0.6, 0.22, 0.08, c, 0, 0.6, -0.32);
+    R(g, 0.2, 0.55, 0.85, 0.08, c, -0.92, 0.4, 0); R(g, 0.2, 0.55, 0.85, 0.08, c, 0.92, 0.4, 0);
+    R(g, 0.4, 0.3, 0.12, 0.06, 0xfacc15, -0.5, 0.6, -0.18);
+  }},
+  armchair: { name: '1인 소파', w: 0.9, d: 0.85, hp: 2, value: 700000, mass: 2, snd: 'plastic', build(g) {
+    R(g, 0.9, 0.4, 0.85, 0.08, 0x92400e, 0, 0.25, 0); R(g, 0.9, 0.6, 0.2, 0.08, 0x92400e, 0, 0.6, -0.32);
+    R(g, 0.15, 0.5, 0.85, 0.06, 0x92400e, -0.4, 0.4, 0); R(g, 0.15, 0.5, 0.85, 0.06, 0x92400e, 0.4, 0.4, 0);
+  }},
+  coffee_table: { name: '티 테이블', w: 1.1, d: 0.6, hp: 2, value: 300000, mass: 2, snd: 'glass', build(g) {
+    B(g, 1.1, 0.03, 0.6, 0xdbeafe, 0, 0.42, 0, GLASS);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) B(g, 0.03, 0.4, 0.03, 0x111827, sx * 0.5, 0.2, sz * 0.25);
+    B(g, 0.25, 0.03, 0.18, 0xef4444, 0.2, 0.45, 0); // 잡지
+  }},
+  tv_stand: { name: '대형 TV', w: 2.2, d: 0.5, hp: 3, value: 3000000, mass: 3, snd: 'electronic', build(g) {
+    for (const x of [-0.8, 0.8]) { B(g, 0.06, 1.1, 0.06, 0x1f2937, x, 0.55, 0); B(g, 0.06, 0.03, 0.5, 0x1f2937, x, 0.02, 0); }
+    R(g, 2.0, 1.15, 0.06, 0.02, 0x0b0b0b, 0, 1.5, 0);
+    const scr = new THREE.Mesh(new THREE.PlaneGeometry(1.92, 1.07), new THREE.MeshBasicMaterial({ map: chartTex }));
+    scr.position.set(0, 1.5, 0.032); g.add(scr);
+  }},
+  meeting_table: { name: '회의 테이블', w: 5, d: 1.6, hp: 5, value: 4000000, mass: 8, snd: 'wood', build(g) {
+    R(g, 5, 0.06, 1.6, 0.03, 0x4a2f1f, 0, 0.75, 0, GLOSS);
+    for (const x of [-1.8, 0, 1.8]) R(g, 0.5, 0.72, 0.6, 0.03, 0x2f1d12, x, 0.36, 0);
+    for (let i = 0; i < 6; i++) { const x = -2 + i * 0.8; B(g, 0.32, 0.02, 0.22, pick([0x9ca3af, 0x1f2937]), x, 0.79, i % 2 ? 0.4 : -0.4); C(g, 0.03, 0.03, 0.2, 0xbfdbfe, x + 0.25, 0.88, i % 2 ? 0.45 : -0.45, { op: 0.6 }); }
+  }},
+  reception: { name: '안내 데스크', w: 3, d: 0.8, hp: 5, value: 5000000, mass: 8, snd: 'wood', build(g) {
+    R(g, 3, 1.1, 0.8, 0.04, 0xf5f5f4, 0, 0.55, 0);
+    B(g, 3.04, 0.06, 0.84, 0x7a5233, 0, 1.13, 0);
+    B(g, 2.6, 0.08, 0.01, 0x22c55e, 0, 0.75, 0.405, { e: 0x22c55e, ei: 0.6 });
+    monitor(g, -0.6, -0.15, 1.16); monitor(g, 0.6, -0.15, 1.16);
+  }},
+  counter_sink: { name: '싱크대', w: 1.4, d: 0.65, hp: 3, value: 800000, mass: 5, snd: 'metal', build(g) {
+    cabinetBase(g, 1.4, 0.65, 0.88, 0xf5f0e6, 0xd6d3d1);
+    B(g, 0.6, 0.02, 0.4, 0x64748b, 0, 0.91, 0, METAL);
+    C(g, 0.02, 0.02, 0.3, 0x9ca3af, 0, 1.05, -0.22, METAL); B(g, 0.02, 0.02, 0.15, 0x9ca3af, 0, 1.2, -0.15, METAL);
+    for (let i = 0; i < 3; i++) C(g, 0.04, 0.035, 0.09, pick([0xffffff, 0xfca5a5, 0x93c5fd]), 0.45, 0.95, -0.1 + i * 0.1);
+  }},
+  counter_coffee: { name: '커피머신', w: 1.4, d: 0.65, hp: 3, value: 2500000, mass: 4, snd: 'electronic', work: WORK.coffee, build(g) {
+    cabinetBase(g, 1.4, 0.65, 0.88, 0xf5f0e6, 0xd6d3d1);
+    R(g, 0.4, 0.48, 0.4, 0.03, 0x1f2937, -0.2, 1.14, -0.05, GLOSS);
+    B(g, 0.38, 0.12, 0.05, 0x9ca3af, -0.2, 1.25, 0.16, METAL);
+    B(g, 0.1, 0.05, 0.01, 0x111827, -0.2, 1.33, 0.155, { e: 0xfbbf24, ei: 1 });
+    for (let i = 0; i < 5; i++) C(g, 0.035, 0.03, 0.08, 0xffffff, 0.35, 0.94 + i * 0.07, 0);
+  }},
+  counter_micro: { name: '전자레인지', w: 1.4, d: 0.65, hp: 3, value: 500000, mass: 4, snd: 'electronic', build(g) {
+    cabinetBase(g, 1.4, 0.65, 0.88, 0xf5f0e6, 0xd6d3d1);
+    R(g, 0.55, 0.32, 0.4, 0.02, 0xe5e7eb, -0.2, 1.06, 0);
+    B(g, 0.35, 0.22, 0.01, 0x111827, -0.25, 1.06, 0.205, GLASS);
+    C(g, 0.08, 0.1, 0.2, 0xffffff, 0.4, 1.0, 0); // 전기포트
+  }},
+  fridge_big: { name: '냉장고', w: 0.9, d: 0.75, hp: 4, value: 2000000, mass: 6, snd: 'metal', build(g) {
+    R(g, 0.9, 1.9, 0.75, 0.04, 0xcbd5e1, 0, 0.95, 0, METAL);
+    B(g, 0.01, 1.8, 0.01, 0x64748b, 0, 0.95, 0.38);
+    B(g, 0.03, 0.5, 0.04, 0x475569, -0.07, 1.2, 0.4); B(g, 0.03, 0.5, 0.04, 0x475569, 0.07, 1.2, 0.4);
+    B(g, 0.12, 0.12, 0.005, 0xfde68a, 0.25, 1.5, 0.38); // 메모
+  }},
+  vending: { name: '음료 자판기', w: 1, d: 0.85, hp: 4, value: 4000000, mass: 7, snd: 'glass', work: WORK.vend, breakText: '음료수 무료!', build(g) {
+    R(g, 1, 1.9, 0.85, 0.03, 0xdc2626, 0, 0.95, 0, GLOSS);
+    B(g, 0.6, 1.2, 0.02, 0x0f172a, -0.12, 1.15, 0.43);
+    for (let r = 0; r < 4; r++) for (let i = 0; i < 4; i++) C(g, 0.04, 0.04, 0.12, pick([0xef4444, 0x3b82f6, 0x22c55e, 0xfacc15, 0xf97316]), -0.33 + i * 0.14, 0.7 + r * 0.28, 0.38);
+    B(g, 0.6, 1.2, 0.01, 0xe0f2fe, -0.12, 1.15, 0.445, GLASS);
+    B(g, 0.18, 0.5, 0.02, 0x1f2937, 0.35, 1.2, 0.43); B(g, 0.6, 0.12, 0.02, 0x111827, -0.12, 0.3, 0.43);
+    B(g, 0.9, 0.18, 0.01, 0xffffff, 0, 1.8, 0.43, { e: 0xffffff, ei: 0.5 });
+  }},
+  snack_shelf: { name: '간식 선반', w: 1.6, d: 0.4, hp: 2, value: 200000, mass: 2, snd: 'plastic', build(g) {
+    for (const x of [-0.78, 0.78]) B(g, 0.04, 1.6, 0.4, 0xd6d3d1, x, 0.8, 0);
+    for (let s = 0; s < 4; s++) {
+      B(g, 1.56, 0.03, 0.4, 0xe7e5e4, 0, 0.2 + s * 0.42, 0);
+      for (let i = 0; i < 6; i++) B(g, 0.18, rand(0.12, 0.26), 0.25, pick([0xf97316, 0xef4444, 0xfacc15, 0x22c55e, 0x8b5cf6, 0x0ea5e9]), -0.62 + i * 0.25, 0.3 + s * 0.42, 0);
+    }
+  }},
+  // ===== 분석센터 장비 =====
+  nmr: { name: 'NMR 핵자기공명', w: 1.6, d: 1.6, hp: 9, value: 1500000000, mass: 14, snd: 'metal', work: WORK.nmr, build(g) {
+    for (const [x, z] of [[-0.45, -0.45], [0.45, -0.45], [-0.45, 0.45], [0.45, 0.45]]) C(g, 0.05, 0.06, 0.5, 0x6b7280, x, 0.25, z, METAL);
+    C(g, 0.62, 0.62, 1.1, 0xe2e8f0, 0, 1.0, 0, METAL, 24); C(g, 0.64, 0.64, 0.08, 0x2563eb, 0, 0.9, 0, undefined, 24);
+    C(g, 0.5, 0.62, 0.15, 0xcbd5e1, 0, 1.62, 0, METAL, 24);
+    for (const x of [-0.25, 0.25]) C(g, 0.06, 0.06, 0.3, 0x94a3b8, x, 1.85, 0, METAL);
+    C(g, 0.12, 0.12, 0.22, 0xf8fafc, 0, 0.35, 0);
+    B(g, 0.5, 0.06, 0.02, 0xfacc15, 0, 1.25, 0.63);
+  }},
+  lcms: { name: 'LC-MS 질량분석기', w: 2.2, d: 0.9, hp: 7, value: 500000000, mass: 10, snd: 'electronic', work: WORK.ms, build(g) {
+    table(g, 2.2, 0.9, 0.8, 0xd1d5db);
+    let y = 0.82;
+    for (const h of [0.18, 0.22, 0.2, 0.08]) { R(g, 0.42, h - 0.01, 0.55, 0.012, 0xe8eaed, -0.8, y + h / 2, 0); B(g, 0.03, 0.015, 0.01, 0x22c55e, -0.95, y + h - 0.03, 0.28, { e: 0x22c55e, ei: 1.5 }); y += h; }
+    R(g, 0.9, 0.62, 0.72, 0.04, 0xf1f5f9, 0.05, 1.13, 0);
+    B(g, 0.92, 0.08, 0.74, 0x7c3aed, 0.05, 1.3, 0);
+    B(g, 0.3, 0.12, 0.01, 0x111827, -0.1, 1.05, 0.365, { e: 0xa78bfa, ei: 0.8 });
+    C(g, 0.05, 0.05, 0.2, 0x9ca3af, -0.35, 1.0, 0.25, METAL).rotation.z = H;
+    monitor(g, 0.8, -0.1, 0.82);
+  }},
+  icp: { name: 'ICP-MS', w: 1.6, d: 0.9, hp: 7, value: 300000000, mass: 10, snd: 'electronic', work: WORK.icp, build(g) {
+    R(g, 1.6, 1.3, 0.9, 0.04, 0xeef2f6, 0, 0.65, 0);
+    B(g, 0.4, 0.35, 0.01, 0x1f2937, -0.4, 0.95, 0.455, GLASS);
+    S(g, 0.07, 0xfb923c, -0.4, 0.95, 0.38, { e: 0xf97316, ei: 2 });
+    B(g, 0.5, 0.1, 0.01, 0x111827, 0.35, 1.05, 0.455, { e: 0x38bdf8, ei: 0.8 });
+    C(g, 0.08, 0.08, 0.3, 0x9ca3af, 0.5, 1.45, -0.2, METAL);
+    B(g, 1.62, 0.06, 0.92, 0x0ea5e9, 0, 1.28, 0);
+  }},
+  ftir: { name: 'FT-IR 적외선분광기', w: 1, d: 0.7, hp: 3, value: 40000000, mass: 3, snd: 'electronic', work: WORK.ir, build(g) {
+    table(g, 1, 0.7, 0.85, 0xd1d5db);
+    R(g, 0.6, 0.24, 0.45, 0.03, 0xe5e7eb, -0.1, 0.99, 0);
+    C(g, 0.06, 0.06, 0.05, 0x334155, -0.1, 1.13, 0.1); B(g, 0.08, 0.15, 0.04, 0x334155, -0.1, 1.2, 0.05);
+    B(g, 0.6, 0.03, 0.46, 0xdc2626, -0.1, 1.1, 0);
+    B(g, 0.22, 0.15, 0.15, 0x9ca3af, 0.33, 0.95, 0, METAL); // 시료 압착기
+  }},
+  kf: { name: '수분측정기(KF)', w: 0.9, d: 0.6, hp: 2, value: 15000000, mass: 2, snd: 'glass', work: WORK.kf, build(g) {
+    table(g, 0.9, 0.6, 0.85, 0xd1d5db);
+    R(g, 0.35, 0.12, 0.3, 0.02, 0x1f2937, -0.15, 0.93, 0);
+    C(g, 0.06, 0.05, 0.16, 0xdbeafe, -0.15, 1.07, 0, GLASS); C(g, 0.05, 0.05, 0.06, 0xb45309, -0.15, 1.03, 0, { op: 0.8 });
+    C(g, 0.006, 0.006, 0.25, 0x9ca3af, -0.15, 1.2, 0, METAL);
+    B(g, 0.22, 0.12, 0.03, 0x111827, 0.22, 0.95, 0.05, { e: 0x22c55e, ei: 0.8 });
+  }},
+  titrator: { name: '자동적정기 · pH미터', w: 1, d: 0.6, hp: 2, value: 20000000, mass: 2, snd: 'glass', work: WORK.titr, build(g) {
+    table(g, 1, 0.6, 0.85, 0xd1d5db);
+    R(g, 0.3, 0.1, 0.3, 0.02, 0xf8fafc, -0.25, 0.92, 0);
+    C(g, 0.012, 0.012, 0.55, 0x9ca3af, -0.35, 1.15, -0.08, METAL);
+    C(g, 0.02, 0.02, 0.35, 0xdbeafe, -0.25, 1.25, -0.02, GLASS);
+    C(g, 0.05, 0.045, 0.1, 0xdbeafe, -0.25, 1.02, 0.03, GLASS); C(g, 0.045, 0.04, 0.05, 0xf472b6, -0.25, 1.0, 0.03, { op: 0.8 });
+    R(g, 0.2, 0.06, 0.15, 0.02, 0x0f766e, 0.25, 0.9, 0); B(g, 0.12, 0.05, 0.01, 0x111827, 0.25, 0.94, 0.076, { e: 0x34d399, ei: 1 });
+    C(g, 0.008, 0.008, 0.2, 0x111827, 0.35, 1.0, -0.05);
+  }},
+  pcr: { name: 'PCR 유전자증폭기', w: 1, d: 0.6, hp: 2, value: 30000000, mass: 2, snd: 'electronic', work: WORK.pcr, build(g) {
+    table(g, 1, 0.6, 0.85, 0xd1d5db);
+    R(g, 0.4, 0.2, 0.4, 0.03, 0xf8fafc, -0.2, 0.97, 0); B(g, 0.38, 0.04, 0.38, 0x0284c7, -0.2, 1.08, 0);
+    B(g, 0.15, 0.08, 0.01, 0x111827, -0.2, 0.97, 0.205, { e: 0x60a5fa, ei: 0.8 });
+    for (let i = 0; i < 6; i++) C(g, 0.01, 0.006, 0.05, pick([0xfde68a, 0xfca5a5, 0x93c5fd]), 0.15 + (i % 3) * 0.04, 0.9, (i < 3 ? -0.03 : 0.03));
+    B(g, 0.25, 0.04, 0.15, 0x1e293b, 0.3, 0.89, 0.12);
+  }},
+  toc: { name: 'TOC 분석기', w: 1, d: 0.7, hp: 3, value: 40000000, mass: 4, snd: 'electronic', work: WORK.toc, build(g) {
+    table(g, 1, 0.7, 0.85, 0xd1d5db);
+    R(g, 0.45, 0.5, 0.5, 0.03, 0xe5e7eb, -0.2, 1.12, 0); B(g, 0.46, 0.05, 0.51, 0x059669, -0.2, 1.3, 0);
+    B(g, 0.18, 0.1, 0.01, 0x111827, -0.2, 1.15, 0.255, { e: 0x34d399, ei: 0.8 });
+    for (let i = 0; i < 8; i++) C(g, 0.015, 0.015, 0.1, 0xdbeafe, 0.15 + (i % 4) * 0.05, 0.92, (i < 4 ? -0.05 : 0.05), GLASS);
+  }},
+  tablet_tester: { name: '경도·붕해 시험기', w: 1.4, d: 0.7, hp: 3, value: 25000000, mass: 3, snd: 'glass', work: WORK.tab, build(g) {
+    table(g, 1.4, 0.7, 0.85, 0xd1d5db);
+    R(g, 0.35, 0.3, 0.35, 0.03, 0xf1f5f9, -0.45, 1.02, 0); B(g, 0.15, 0.08, 0.01, 0x111827, -0.45, 1.05, 0.18, { e: 0xfbbf24, ei: 0.8 });
+    B(g, 0.5, 0.25, 0.35, 0x7dd3fc, 0.2, 1.0, 0, { r: 0.05, op: 0.4 });
+    for (const x of [0.05, 0.35]) { C(g, 0.06, 0.06, 0.18, 0xffffff, x, 1.0, 0, GLASS); C(g, 0.008, 0.008, 0.3, 0x9ca3af, x, 1.25, 0, METAL); }
+    R(g, 0.6, 0.08, 0.3, 0.02, 0xe5e7eb, 0.2, 1.4, 0);
+    C(g, 0.12, 0.12, 0.05, 0x4b5563, 0.55, 0.9, 0.15); // 마손도 드럼
+  }},
+  glovebox: { name: '글러브박스', w: 1.8, d: 0.9, hp: 5, value: 60000000, mass: 7, snd: 'glass', work: WORK.glove, build(g) {
+    cabinetBase(g, 1.8, 0.85, 0.85, 0xcfd6dc, 0x6b7280);
+    B(g, 1.6, 0.75, 0.7, 0xbfdbfe, 0, 1.28, 0, GLASS);
+    for (const x of [-0.82, 0.82]) B(g, 0.06, 0.8, 0.75, 0x6b7280, x, 1.28, 0);
+    B(g, 1.7, 0.06, 0.78, 0x6b7280, 0, 1.68, 0);
+    for (const x of [-0.3, 0.3]) { C(g, 0.1, 0.1, 0.04, 0x111827, x, 1.2, 0.36).rotation.x = H; C(g, 0.06, 0.05, 0.3, 0x111827, x, 1.2, 0.2).rotation.x = H; }
+  }},
+  oven: { name: '건조기(오븐)', w: 0.8, d: 0.7, hp: 3, value: 5000000, mass: 5, snd: 'metal', build(g) {
+    R(g, 0.8, 1.1, 0.7, 0.03, 0xe5e7eb, 0, 0.55, 0);
+    B(g, 0.6, 0.6, 0.01, 0x111827, 0, 0.62, 0.355, GLASS); B(g, 0.5, 0.5, 0.01, 0xf97316, 0, 0.62, 0.35, { e: 0xf97316, ei: 0.4, op: 0.5 });
+    B(g, 0.03, 0.4, 0.04, 0x9ca3af, 0.33, 0.62, 0.38, METAL);
+    B(g, 0.2, 0.08, 0.01, 0x111827, 0, 1.0, 0.355, { e: 0xef4444, ei: 0.9 });
+  }},
+  safety_shower: { name: '비상 샤워기', w: 0.8, d: 0.8, hp: 2, value: 1500000, mass: 2, snd: 'metal', build(g) {
+    C(g, 0.03, 0.03, 2.3, 0x16a34a, 0, 1.15, -0.25); B(g, 0.03, 0.03, 0.4, 0x16a34a, 0, 2.28, -0.05);
+    C(g, 0.15, 0.08, 0.06, 0x16a34a, 0, 2.22, 0.15);
+    C(g, 0.12, 0.12, 0.04, 0x16a34a, 0, 1.0, -0.05); C(g, 0.006, 0.006, 0.6, 0x9ca3af, 0.15, 1.9, 0.1, METAL);
+    B(g, 0.6, 0.02, 0.6, 0xfacc15, 0, 0.01, 0.05);
+  }},
+  lab_cart: { name: '실험 카트', w: 0.8, d: 0.5, hp: 1, value: 300000, mass: 1, snd: 'metal', build(g) {
+    for (const y of [0.25, 0.85]) B(g, 0.78, 0.03, 0.48, 0x9ca3af, 0, y, 0, METAL);
+    for (const [x, z] of [[-0.37, -0.22], [0.37, -0.22], [-0.37, 0.22], [0.37, 0.22]]) { C(g, 0.012, 0.012, 0.85, 0x9ca3af, x, 0.5, z, METAL); S(g, 0.035, 0x111111, x, 0.035, z); }
+    for (let i = 0; i < 4; i++) bottle(g, -0.25 + i * 0.16, 0.865, 0, pick([0x92400e, 0xe0f2fe, 0x1e3a8a]));
+    B(g, 0.3, 0.12, 0.3, 0x60a5fa, 0.1, 0.33, 0);
+  }},
+  // ===== 생산동 =====
+  tablet_press: { name: '타정기', w: 1.4, d: 1.2, hp: 8, value: 800000000, mass: 14, snd: 'metal', work: WORK.press, build(g) {
+    R(g, 1.3, 0.8, 1.1, 0.04, 0xd1d5db, 0, 0.4, 0, METAL);
+    B(g, 1.1, 0.7, 0.9, 0xbfdbfe, 0, 1.15, 0, GLASS);
+    C(g, 0.35, 0.35, 0.12, 0x9ca3af, 0, 0.9, 0, METAL, 20);
+    for (let i = 0; i < 8; i++) { const a = i / 8 * PI * 2; C(g, 0.025, 0.025, 0.35, 0x6b7280, Math.cos(a) * 0.28, 1.1, Math.sin(a) * 0.28, METAL); }
+    C(g, 0.18, 0.06, 0.3, 0xe5e7eb, 0, 1.65, 0, METAL); // 호퍼
+    B(g, 1.32, 0.05, 1.12, 0x2563eb, 0, 1.52, 0);
+    B(g, 0.3, 0.2, 0.05, 0x111827, 0.5, 1.0, 0.56, { e: 0x22c55e, ei: 0.8 });
+  }},
+  coater: { name: '코팅기', w: 1.6, d: 1.4, hp: 7, value: 500000000, mass: 12, snd: 'metal', build(g) {
+    R(g, 1.5, 0.5, 1.3, 0.04, 0xcbd5e1, 0, 0.25, 0, METAL);
+    C(g, 0.55, 0.55, 1.1, 0xe2e8f0, 0, 1.05, 0, METAL, 20).rotation.z = H;
+    C(g, 0.4, 0.4, 0.02, 0x1e293b, 0.56, 1.05, 0, GLASS, 20).rotation.z = H;
+    C(g, 0.3, 0.3, 0.03, 0xf97316, 0.55, 1.05, 0, { op: 0.6 }, 20).rotation.z = H;
+    C(g, 0.08, 0.08, 0.6, 0x9ca3af, -0.4, 1.8, -0.3, METAL);
+    B(g, 0.25, 0.4, 0.15, 0x334155, 0.65, 0.65, 0.6); B(g, 0.18, 0.12, 0.01, 0x111827, 0.65, 0.75, 0.68, { e: 0x60a5fa, ei: 0.8 });
+  }},
+  blister: { name: '블리스터 포장기', w: 3, d: 1, hp: 7, value: 300000000, mass: 12, snd: 'metal', work: WORK.pack, build(g) {
+    R(g, 3, 0.9, 0.9, 0.04, 0xe5e7eb, 0, 0.45, 0, METAL);
+    B(g, 2.8, 0.03, 0.4, 0x334155, 0, 0.92, 0);
+    for (let i = 0; i < 10; i++) B(g, 0.2, 0.012, 0.3, 0xf8fafc, -1.2 + i * 0.27, 0.945, 0, GLASS);
+    B(g, 0.6, 0.6, 0.8, 0xbfdbfe, -0.6, 1.25, 0, GLASS); B(g, 0.6, 0.6, 0.8, 0xbfdbfe, 0.7, 1.25, 0, GLASS);
+    C(g, 0.25, 0.25, 0.1, 0xc0c0c0, -1.3, 1.3, -0.1, METAL).rotation.x = H; // 알루미늄 롤
+    B(g, 0.3, 0.2, 0.05, 0x111827, 1.3, 1.1, 0.46, { e: 0xfbbf24, ei: 0.8 });
+  }},
+  drum: { name: '원료 드럼', w: 0.6, d: 0.6, hp: 2, value: 2000000, mass: 3, snd: 'plastic', build(g, opt = {}) {
+    const c = opt.color ?? 0x1d4ed8;
+    C(g, 0.28, 0.28, 0.9, c, 0, 0.45, 0); C(g, 0.29, 0.29, 0.04, c, 0, 0.3, 0); C(g, 0.29, 0.29, 0.04, c, 0, 0.65, 0);
+    C(g, 0.06, 0.06, 0.03, 0xf8fafc, 0.12, 0.91, 0); B(g, 0.25, 0.18, 0.005, 0xffffff, 0, 0.5, 0.28);
+  }},
+  pallet: { name: '팔레트 박스', w: 1.2, d: 1, hp: 3, value: 800000, mass: 5, snd: 'wood', build(g) {
+    B(g, 1.2, 0.14, 1.0, 0xa16207, 0, 0.07, 0);
+    for (let i = 0; i < 4; i++) B(g, 0.55, 0.4, 0.45, 0xc8a165, (i % 2 ? 0.29 : -0.29), 0.34, (i < 2 ? -0.24 : 0.24));
+    for (let i = 0; i < 2; i++) B(g, 0.55, 0.4, 0.45, 0xc8a165, (i ? 0.29 : -0.29), 0.75, 0);
+    B(g, 1.22, 0.02, 0.02, 0x92400e, 0, 0.5, 0.48);
+  }},
+  locker: { name: '사물함', w: 1.2, d: 0.5, hp: 3, value: 600000, mass: 4, snd: 'metal', build(g, opt = {}) {
+    R(g, 1.2, 1.9, 0.5, 0.02, opt.color ?? 0x64748b, 0, 0.95, 0);
+    for (let i = 0; i < 3; i++) {
+      if (i) B(g, 0.01, 1.85, 0.01, 0x334155, -0.6 + i * 0.4, 0.95, 0.255);
+      B(g, 0.15, 0.02, 0.01, 0xcbd5e1, -0.4 + i * 0.4, 1.6, 0.255); B(g, 0.03, 0.12, 0.02, 0xcbd5e1, -0.28 + i * 0.4, 1.0, 0.26);
+    }
+  }},
+  // ===== 전산실 =====
+  server_rack: { name: '서버 랙', w: 0.7, d: 1, hp: 4, value: 50000000, mass: 8, snd: 'electronic', work: WORK.server, build(g) {
+    R(g, 0.7, 2.1, 1, 0.02, 0x111827, 0, 1.05, 0);
+    B(g, 0.6, 1.9, 0.01, 0x1f2937, 0, 1.05, 0.505, GLASS);
+    for (let i = 0; i < 9; i++) {
+      B(g, 0.58, 0.14, 0.02, 0x374151, 0, 0.2 + i * 0.2, 0.49);
+      const led = pick([0x22c55e, 0x22c55e, 0x3b82f6, 0xf59e0b]);
+      B(g, 0.02, 0.02, 0.01, led, -0.22 + rand(0, 0.15), 0.2 + i * 0.2, 0.5, { e: led, ei: 2 });
+    }
+  }},
+  // ===== 휴게실 =====
+  pingpong: { name: '탁구대', w: 2.7, d: 1.5, hp: 3, value: 800000, mass: 4, snd: 'wood', work: WORK.pong, build(g) {
+    table(g, 2.7, 1.5, 0.76, 0x1e5aa8, 0x1f2937);
+    B(g, 2.7, 0.005, 0.02, 0xffffff, 0, 0.765, 0); B(g, 0.02, 0.005, 1.5, 0xffffff, 0, 0.765, 0);
+    B(g, 0.02, 0.15, 1.6, 0xf8fafc, 0, 0.84, 0, { op: 0.7 });
+    S(g, 0.02, 0xf97316, 0.6, 0.79, 0.3);
+  }},
+  massage: { name: '안마의자', w: 0.9, d: 1.4, hp: 4, value: 4500000, mass: 6, snd: 'plastic', work: WORK.massage, build(g, opt = {}) {
+    const c = opt.color ?? 0x7f1d1d;
+    R(g, 0.85, 0.45, 1.2, 0.12, 0x1f2937, 0, 0.22, 0);
+    R(g, 0.8, 0.2, 0.7, 0.08, c, 0, 0.52, -0.1, GLOSS);
+    R(g, 0.8, 1.0, 0.25, 0.1, c, 0, 0.95, -0.45, GLOSS).rotation.x = -0.35;
+    for (const x of [-0.4, 0.4]) R(g, 0.12, 0.3, 0.8, 0.05, c, x, 0.7, -0.1, GLOSS);
+    R(g, 0.6, 0.35, 0.3, 0.08, c, 0, 0.3, 0.5, GLOSS);
+  }},
+  arcade: { name: '오락기', w: 0.8, d: 0.8, hp: 3, value: 2500000, mass: 4, snd: 'electronic', work: WORK.game, build(g, opt = {}) {
+    const c = opt.color ?? 0x7c3aed;
+    R(g, 0.75, 1.75, 0.75, 0.03, c, 0, 0.875, 0);
+    B(g, 0.6, 0.45, 0.02, 0x111827, 0, 1.35, 0.33, { e: pick([0x22d3ee, 0xf472b6, 0xfacc15]), ei: 0.8 }).rotation.x = -0.25;
+    B(g, 0.7, 0.06, 0.3, 0x1f2937, 0, 0.98, 0.38);
+    S(g, 0.03, 0xef4444, -0.15, 1.03, 0.4); S(g, 0.025, 0x22c55e, 0.08, 1.02, 0.42); S(g, 0.025, 0x3b82f6, 0.16, 1.02, 0.4);
+    B(g, 0.77, 0.18, 0.05, 0xfacc15, 0, 1.68, 0.36, { e: 0xfacc15, ei: 0.6 });
+  }},
+  bookshelf: { name: '책장', w: 1.2, d: 0.4, hp: 2, value: 400000, mass: 3, snd: 'wood', build(g) {
+    R(g, 1.2, 1.8, 0.4, 0.02, 0x8b5e3c, 0, 0.9, 0);
+    for (let k = 0; k < 4; k++) {
+      B(g, 1.12, 0.02, 0.36, 0x6b4428, 0, 0.12 + k * 0.44, 0.01);
+      let x = -0.52;
+      while (x < 0.46) {
+        const w = rand(0.04, 0.09), h = rand(0.25, 0.36);
+        B(g, w, h, 0.26, pick([0xb91c1c, 0x1d4ed8, 0x15803d, 0xca8a04, 0xf8fafc, 0x6d28d9]), x + w / 2, 0.13 + k * 0.44 + h / 2, 0.04);
+        x += w + 0.008;
+      }
+    }
+  }},
+  fan: { name: '선풍기', w: 0.4, d: 0.4, hp: 1, value: 60000, mass: 0.6, snd: 'plastic', build(g) {
+    C(g, 0.18, 0.2, 0.05, 0xf8fafc, 0, 0.025, 0); C(g, 0.025, 0.025, 1.0, 0xe5e7eb, 0, 0.55, 0);
+    C(g, 0.2, 0.2, 0.12, 0x93c5fd, 0, 1.1, 0.03, { op: 0.6 }).rotation.x = H;
+    S(g, 0.06, 0xf8fafc, 0, 1.1, 0);
+  }},
+  dining_table: { name: '식탁', w: 1.8, d: 0.9, hp: 3, value: 600000, mass: 3, snd: 'wood', build(g) {
+    table(g, 1.8, 0.9, 0.74, 0xd6b48a, 0x4b5563);
+    C(g, 0.04, 0.035, 0.1, 0xffffff, 0.3, 0.79, 0.1); B(g, 0.25, 0.04, 0.18, 0xfbbf24, -0.4, 0.76, -0.1);
+  }},
+  chair2: { name: '의자', w: 0.5, d: 0.5, hp: 1, value: 80000, mass: 0.5, snd: 'wood', build(g) {
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) B(g, 0.03, 0.45, 0.03, 0x374151, sx * 0.2, 0.225, sz * 0.2, METAL);
+    R(g, 0.46, 0.04, 0.46, 0.02, 0xd6b48a, 0, 0.47, 0); R(g, 0.46, 0.4, 0.04, 0.02, 0xd6b48a, 0, 0.7, 0.21);
+  }},
+  fire_ext: { name: '소화기', w: 0.25, d: 0.25, hp: 1, value: 50000, mass: 1, snd: 'metal', special: 'powder', build(g) {
+    C(g, 0.09, 0.09, 0.5, 0xdc2626, 0, 0.25, 0, GLOSS); S(g, 0.09, 0xdc2626, 0, 0.5, 0, GLOSS);
+    B(g, 0.12, 0.04, 0.04, 0x111111, 0, 0.62, 0); B(g, 0.03, 0.3, 0.03, 0x111111, 0.07, 0.42, 0.06);
+    B(g, 0.1, 0.08, 0.005, 0xffffff, 0, 0.3, 0.09);
+  }},
+  trash: { name: '휴지통', w: 0.35, d: 0.35, hp: 1, value: 20000, mass: 0.5, snd: 'plastic', build(g) {
+    C(g, 0.16, 0.13, 0.45, 0x6b7280, 0, 0.225, 0); S(g, 0.06, 0xffffff, 0.03, 0.45, 0.02);
+  }},
+  water_cooler: { name: '냉온수기', w: 0.4, d: 0.4, hp: 2, value: 400000, mass: 1.5, snd: 'glass', build(g) {
+    R(g, 0.4, 0.95, 0.4, 0.03, 0xf1f5f9, 0, 0.475, 0); C(g, 0.16, 0.16, 0.4, 0x7dd3fc, 0, 1.15, 0, { r: 0.1, op: 0.55 });
+  }},
+  cardboard: { name: '박스', w: 0.6, d: 0.5, hp: 1, value: 10000, mass: 0.8, snd: 'wood', build(g) {
+    B(g, 0.6, 0.45, 0.5, 0xc69c6d, 0, 0.225, 0); B(g, 0.62, 0.05, 0.1, 0xd6b48a, 0, 0.45, 0);
+    if (Math.random() < 0.6) { B(g, 0.45, 0.35, 0.4, 0xb8895a, 0.03, 0.625, 0, undefined); }
+  }},
+  cone: { name: '라바콘', w: 0.35, d: 0.35, hp: 1, value: 15000, mass: 0.4, snd: 'plastic', build(g) {
+    B(g, 0.35, 0.03, 0.35, 0xf97316, 0, 0.015, 0); C(g, 0.03, 0.14, 0.55, 0xf97316, 0, 0.3, 0); C(g, 0.08, 0.1, 0.08, 0xffffff, 0, 0.3, 0);
+  }},
+  locked_door: { name: '잠긴 문', w: 1.4, d: 0.3, hp: Infinity, value: 0, mass: Infinity, snd: 'wood', fixed: true, build(g, opt = {}) {
+    R(g, 1.3, 2.1, 0.1, 0.02, 0x7a5233, 0, 1.05, 0);
+    B(g, 0.05, 0.05, 0.12, 0xd4a017, 0.5, 1.0, 0.03, METAL);
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.55), new THREE.MeshBasicMaterial({ map: lockedTex(opt.label || '준비중') }));
+    sign.position.set(0, 1.45, 0.06); g.add(sign);
+    sign.userData.keep = true;
+  }},
+};
+
+/* =====================================================================
+   7. 맵: 구역 / 벽 / 배치
+   ===================================================================== */
+// 북쪽 방(z -14..-2) · 복도(z -2..2) · 남쪽 방(z 2..14), 동서로 -MAP_X..MAP_X
+const MAP_X = 64;
+const ZONES = [
+  { id: 'prod',   name: '생산동',     en: 'Production', x0: -64, x1: -40, z0: -14, z1: -2, floor: 'epoxy',  color: '#3b82f6', doors: [-52], doorW: 3 },
+  { id: 'rnd',    name: '연구소',     en: 'R&D',      x0: -40, x1: -16, z0: -14, z1: -2, floor: 'lab',      color: '#2f9e8f', doors: [-32, -21] },
+  { id: 'lobby',  name: '로비',       en: 'Lobby',    x0: -16, x1: -4,  z0: -14, z1: -2, floor: 'marble',   color: '#64748b', doors: [-10], doorW: 4 },
+  { id: 'qc',     name: '품질관리팀', en: 'QC',       x0: -4,  x1: 22,  z0: -14, z1: -2, floor: 'lab',      color: '#6a5acd', doors: [3.2, 13.2] },
+  { id: 'pantry', name: '탕비실',     en: 'Pantry',   x0: 22,  x1: 40,  z0: -14, z1: -2, floor: 'wood',     color: '#b45309', doors: [30.2] },
+  { id: 'anal',   name: '분석센터',   en: 'Analysis', x0: 40,  x1: 64,  z0: -14, z1: -2, floor: 'lab',      color: '#0ea5e9', doors: [47, 58] },
+  { id: 'hall',   name: '복도',       en: 'Hallway',  x0: -64, x1: 64,  z0: -2,  z1: 2,  floor: 'tile',     color: '#94a3b8', doors: [] },
+  { id: 'lounge', name: '휴게실',     en: 'Lounge',   x0: -64, x1: -40, z0: 2,   z1: 14, floor: 'wood',     color: '#f472b6', doors: [-52] },
+  { id: 'meet',   name: '대회의실',   en: 'Meeting',  x0: -40, x1: -26, z0: 2,   z1: 14, floor: 'carpet2',  color: '#7c3aed', doors: [-37.4] },
+  { id: 'sales',  name: '영업부',     en: 'Sales',    x0: -26, x1: 2,   z0: 2,   z1: 14, floor: 'carpet',   color: '#e07a2f', doors: [-18.8, -6.8] },
+  { id: 'hr',     name: '인사팀',     en: 'HR',       x0: 2,   x1: 14,  z0: 2,   z1: 14, floor: 'concrete', color: '#ef4444', doors: [8],  locked: true },
+  { id: 'fin',    name: '재무팀',     en: 'Finance',  x0: 14,  x1: 26,  z0: 2,   z1: 14, floor: 'concrete', color: '#14b8a6', doors: [20], locked: true },
+  { id: 'ceo',    name: '대표이사실', en: 'CEO',      x0: 26,  x1: 40,  z0: 2,   z1: 14, floor: 'concrete', color: '#a855f7', doors: [33], locked: true },
+  { id: 'it',     name: '전산실',     en: 'IT',       x0: 40,  x1: 64,  z0: 2,   z1: 14, floor: 'raised',   color: '#22c55e', doors: [46] },
+];
+const zoneById = id => ZONES.find(z => z.id === id);
+function zoneAt(x, z) {
+  for (const zn of ZONES) if (x >= zn.x0 && x < zn.x1 && z >= zn.z0 && z < zn.z1) return zn;
+  return null;
+}
+for (const zn of ZONES) {
+  zn.north = zn.z1 <= -2;
+}
+const DEPARTMENTS = [
+  { id: 'rnd', name: '연구소', ready: true }, { id: 'qc', name: '품질관리팀', ready: true }, { id: 'sales', name: '영업부', ready: true },
+  { id: 'prod', name: '생산부', ready: true }, { id: 'clin', name: '임상개발팀' }, { id: 'ra', name: '인허가팀' }, { id: 'mkt', name: '마케팅팀' },
+  { id: 'hr', name: '인사팀' }, { id: 'fin', name: '재무팀' }, { id: 'ceo', name: '대표이사실' },
+];
+const DEPT_COLORS = { rnd: '#2f9e8f', qc: '#6a5acd', sales: '#e07a2f', prod: '#3b82f6', clin: '#ec4899', ra: '#84cc16', mkt: '#f59e0b', hr: '#ef4444', fin: '#14b8a6', ceo: '#a855f7' };
+const SPAWNS = { rnd: [-21, -3.3, PI], qc: [13.2, -3.3, PI], sales: [-18.8, 3.3, 0], prod: [-52, -3.3, PI] };
+
+// [타입, x, z, 회전, 옵션]
+const LAYOUT = [
+  // ---- 연구소: 세포배양실(유리방) ----
+  ['bsc', -38.6, -13.5], ['bsc', -36.4, -13.5], ['incubator', -34.3, -13.55], ['incubator', -33.2, -13.55],
+  ['freezer80', -39.45, -10.5, H], ['stool', -38.6, -12.4], ['stool', -36.4, -12.4],
+  // ---- 연구소: 메인 ----
+  ['fume_hood', -30, -13.45], ['fume_hood', -27.3, -13.45], ['reagent_cab', -24.9, -13.68], ['reagent_cab', -23.6, -13.68],
+  ['autoclave', -21.7, -13.5], ['freezer80', -20.1, -13.52], ['centrifuge', -17.3, -13.55],
+  ['lab_bench', -28, -9.8], ['lab_bench', -23.4, -9.8], ['lab_bench', -28, -6.4], ['lab_bench', -23.4, -6.4],
+  ['stool', -28, -8.85], ['stool', -23.4, -8.85], ['stool', -28, -5.45], ['stool', -23.4, -5.45],
+  ['micro_bench', -19, -9.8], ['stool', -19.3, -8.95], ['desk', -18.6, -5.4], ['chair', -18.6, -4.55],
+  ['plant_big', -39.4, -2.6], ['plant_big', -31.3, -7.4], ['plant_small', -16.5, -2.5],
+  // ---- 로비 ----
+  ['reception', -10, -9.2], ['exec_chair', -10, -10.1, PI], ['sofa', -15.4, -6, H, { color: 0x334155 }], ['armchair', -5, -6.8, -H],
+  ['coffee_table', -6.3, -6.8, H], ['plant_big', -15.3, -13.3], ['plant_big', -4.7, -13.3], ['plant_small', -15.4, -3.6],
+  // ---- 품질관리팀 ----
+  ['hplc', -2.6, -13.5], ['hplc', -0.7, -13.5], ['hplc', 1.2, -13.5], ['hplc', 3.1, -13.5],
+  ['gc', 5.0, -13.5], ['gc', 6.75, -13.5],
+  ['gas_cyl', 7.95, -13.75, 0, { color: 0x8b5a2b }], ['gas_cyl', 8.3, -13.75, 0, { color: 0x9ca3af }], ['gas_cyl', 8.65, -13.75, 0, { color: 0xf97316 }],
+  ['stability', 9.65, -13.6], ['stability', 10.9, -13.6], ['reagent_cab', 12.3, -13.68], ['fume_hood', 14.5, -13.45],
+  ['dissolution', -2.2, -9.6], ['dissolution', 0.1, -9.6], ['uv', 2.2, -9.6],
+  ['lab_bench', 6.0, -9.6], ['lab_bench', 10.4, -9.6], ['stool', 6, -8.65], ['stool', 10.4, -8.65],
+  ['desk', -2.6, -5.6], ['desk', -0.8, -5.6], ['desk', 6.0, -5.6], ['desk', 7.8, -5.6], ['desk', 9.6, -5.6],
+  ['desk', 16.4, -5.6], ['desk', 18.2, -5.6], ['desk', 20.0, -5.6],
+  ['chair', -2.6, -4.75], ['chair', -0.8, -4.75], ['chair', 6.0, -4.75], ['chair', 7.8, -4.75], ['chair', 9.6, -4.75],
+  ['chair', 16.4, -4.75], ['chair', 18.2, -4.75], ['chair', 20.0, -4.75],
+  ['cabinet', 21.55, -3.6, -H], ['plant_big', -3.4, -2.6], ['plant_small', 15.3, -8.4],
+  // ---- 품질관리팀: 저울실(유리방) ----
+  ['balance', 17.0, -13.55], ['balance', 18.6, -13.55], ['balance', 20.2, -13.55],
+  // ---- 탕비실 ----
+  ['counter_sink', 23.5, -13.62], ['counter_coffee', 24.9, -13.62], ['counter_micro', 26.3, -13.62], ['fridge_big', 27.5, -13.55],
+  ['vending', 28.6, -13.55], ['vending', 29.7, -13.55], ['snack_shelf', 31.6, -13.75], ['water', 33.2, -13.7], ['plant_big', 39.3, -13.3],
+  ['dining_table', 27, -8.5], ['chair2', 26.5, -9.35, PI], ['chair2', 27.5, -9.35, PI], ['chair2', 26.5, -7.65], ['chair2', 27.5, -7.65],
+  ['dining_table', 33.5, -8.5], ['chair2', 33, -9.35, PI], ['chair2', 34, -9.35, PI], ['chair2', 33, -7.65], ['chair2', 34, -7.65],
+  ['sofa', 39.3, -7, -H, { color: 0x166534 }], ['trash', 23, -2.6], ['trash', 38.5, -2.6],
+  // ---- 복도 ----
+  ['fire_ext', -25, -1.75], ['fire_ext', -2, 1.75], ['fire_ext', 18, -1.75], ['fire_ext', 36, 1.75],
+  ['water_cooler', -30, 1.7], ['trash', -13, -1.7], ['trash', 10, 1.7], ['plant_small', -39.5, 0], ['plant_small', 39.5, 0],
+  // ---- 대회의실 ----
+  ['meeting_table', -33, 8.6], ['tv_stand', -31, 2.7],
+  ['chair', -34.8, 7.25, PI], ['chair', -33, 7.25, PI], ['chair', -31.2, 7.25, PI], ['chair', -34.8, 9.95], ['chair', -33, 9.95], ['chair', -31.2, 9.95],
+  ['whiteboard', -39.6, 8.6, H], ['plant_big', -39.3, 13.3], ['plant_big', -26.7, 13.3],
+  // ---- 영업부 ----
+  ['cubicle', -23.6, 6.2], ['cubicle', -21.8, 6.2], ['cubicle', -20.0, 6.2], ['cubicle', -13.8, 6.2], ['cubicle', -12.0, 6.2], ['cubicle', -10.2, 6.2],
+  ['cubicle', -23.6, 10.2], ['cubicle', -21.8, 10.2], ['cubicle', -20.0, 10.2], ['cubicle', -13.8, 10.2], ['cubicle', -12.0, 10.2], ['cubicle', -10.2, 10.2],
+  ['chair', -23.6, 7.05], ['chair', -21.8, 7.05], ['chair', -20.0, 7.05], ['chair', -13.8, 7.05], ['chair', -12.0, 7.05], ['chair', -10.2, 7.05],
+  ['chair', -23.6, 11.05], ['chair', -21.8, 11.05], ['chair', -20.0, 11.05], ['chair', -13.8, 11.05], ['chair', -12.0, 11.05], ['chair', -10.2, 11.05],
+  ['exec_desk', -3, 8.5], ['exec_chair', -3, 9.45], ['sales_board', -25.65, 9, H], ['printer', -25.4, 3.2, H], ['shredder', -25.6, 4.4, H],
+  ['trophy', 1.6, 5.5, -H], ['water', 1.6, 13.4], ['sofa', -6.5, 13.35, PI, { color: 0x7c2d12 }], ['coffee_table', -6.5, 12.1],
+  ['plant_big', -25.3, 13.3], ['plant_big', 1.3, 2.7], ['plant_small', -16.9, 13.4],
+  // ---- 잠긴 부서 (준비중) ----
+  ['locked_door', 8, 2.0, 0, { label: '인사팀' }], ['locked_door', 20, 2.0, 0, { label: '재무팀' }], ['locked_door', 33, 2.0, 0, { label: '대표이사실' }],
+  ['cardboard', 5, 6], ['cardboard', 5.7, 6.5], ['cardboard', 10.5, 10], ['cone', 7, 4], ['cone', 9, 4.2],
+  ['cardboard', 17, 9], ['cardboard', 23, 5], ['cone', 19, 4.3], ['cone', 21, 4],
+  ['cardboard', 30, 8], ['cardboard', 36, 11], ['cardboard', 36.6, 11.5], ['cone', 32, 4], ['cone', 34, 4.2],
+  // ---- 생산동: 탈의실(유리방) ----
+  ['locker', -63.65, -12.2, H], ['locker', -63.65, -10.7, H], ['locker', -59.5, -13.65], ['bookshelf', -57, -13.7],
+  // ---- 생산동: 클린룸 ----
+  ['tablet_press', -53.6, -12.9], ['tablet_press', -50.6, -12.9], ['coater', -47.2, -12.7], ['blister', -42.3, -13.35],
+  ['drum', -55.3, -6.8], ['drum', -54.6, -6.8, 0, { color: 0x1e40af }], ['drum', -55.3, -6.1], ['drum', -54.6, -6.1, 0, { color: 0x15803d }],
+  ['pallet', -62.8, -6.8], ['pallet', -62.8, -4.4], ['pallet', -61.2, -5.6, H],
+  ['lab_bench', -47, -8.2], ['stool', -47, -7.25], ['tablet_tester', -42.4, -8.3, -H], ['lab_cart', -50, -6.4],
+  ['drum', -41, -4.4, 0, { color: 0x6b7280 }], ['drum', -41.7, -4.4, 0, { color: 0x6b7280 }], ['fire_ext', -56.4, -2.5], ['trash', -40.6, -2.6],
+  // ---- 분석센터 ----
+  ['lcms', 41.5, -13.45], ['lcms', 44.0, -13.45], ['icp', 46.6, -13.45], ['ftir', 48.3, -13.6], ['toc', 49.6, -13.6],
+  ['kf', 50.8, -13.65], ['titrator', 51.95, -13.65], ['pcr', 53.2, -13.65], ['oven', 54.5, -13.6], ['oven', 55.4, -13.6],
+  ['glovebox', 57.5, -13.5], ['nmr', 61.8, -12.0], ['stool', 41.5, -12.5], ['stool', 44, -12.5],
+  ['lab_bench', 43.5, -9.0], ['lab_bench', 52.0, -9.0], ['stool', 43.5, -8.05], ['stool', 52, -8.05],
+  ['tablet_tester', 47.8, -9.1], ['safety_shower', 40.7, -9.5], ['lab_cart', 56.5, -8.5],
+  ['desk', 50.0, -5.6], ['desk', 51.8, -5.6], ['desk', 53.6, -5.6], ['chair', 50.0, -4.75], ['chair', 51.8, -4.75], ['chair', 53.6, -4.75],
+  ['bookshelf', 63.6, -7.0, -H], ['cabinet', 63.55, -4.6, -H], ['plant_big', 40.7, -2.6], ['gas_cyl', 59.2, -8.9, 0, { color: 0x9ca3af }], ['gas_cyl', 58.8, -8.9, 0, { color: 0x166534 }],
+  // ---- 복도 확장 ----
+  ['fire_ext', -48, -1.75], ['fire_ext', 52, 1.75], ['water_cooler', 44, -1.7], ['trash', -58, 1.7], ['plant_small', -63.5, 0], ['plant_small', 63.5, 0],
+  ['fan', 61, -1.6],
+  // ---- 휴게실 ----
+  ['pingpong', -58, 8.5], ['massage', -47.5, 13.1, PI], ['massage', -46.3, 13.1, PI, { color: 0x1e3a8a }], ['massage', -45.1, 13.1, PI],
+  ['arcade', -63.5, 10.5, H], ['arcade', -63.5, 11.5, H, { color: 0xdc2626 }], ['arcade', -63.5, 12.5, H, { color: 0x0891b2 }],
+  ['sofa', -41, 8, -H, { color: 0x9d174d }], ['coffee_table', -42.4, 8, -H], ['armchair', -44, 5.5, PI],
+  ['bookshelf', -55, 13.7, PI], ['bookshelf', -53.7, 13.7, PI], ['vending', -63.4, 4, H], ['water', -63.5, 6.3],
+  ['plant_big', -40.7, 13.3], ['plant_big', -63.3, 13.3], ['fan', -60, 3.0], ['trash', -50.5, 2.6],
+  // ---- 전산실 ----
+  ['desk', 41.5, 7], ['desk', 41.5, 10.5], ['chair', 41.5, 7.85], ['chair', 41.5, 11.35], ['locker', 46.5, 13.65, PI], ['cardboard', 44, 13], ['cardboard', 44.6, 13.4],
+  ['server_rack', 51, 6.5], ['server_rack', 51.75, 6.5], ['server_rack', 52.5, 6.5], ['server_rack', 53.25, 6.5], ['server_rack', 54, 6.5],
+  ['server_rack', 57, 6.5], ['server_rack', 57.75, 6.5], ['server_rack', 58.5, 6.5], ['server_rack', 59.25, 6.5], ['server_rack', 60, 6.5],
+  ['server_rack', 51, 10.5, PI], ['server_rack', 51.75, 10.5, PI], ['server_rack', 52.5, 10.5, PI], ['server_rack', 53.25, 10.5, PI], ['server_rack', 54, 10.5, PI],
+  ['server_rack', 57, 10.5, PI], ['server_rack', 57.75, 10.5, PI], ['server_rack', 58.5, 10.5, PI], ['server_rack', 59.25, 10.5, PI], ['server_rack', 60, 10.5, PI],
+  ['fan', 62.8, 8.5], ['fire_ext', 47, 4.2], ['printer', 44, 2.7],
+  // ---- 기존 구역 보강 ----
+  ['kf', -19, -13.65], ['pcr', -17.4, -11.9], ['lab_cart', -26, -4], ['safety_shower', -39.3, -5],
+  ['ftir', 14.6, -9.8], ['titrator', 2.4, -12.0], ['lab_cart', 4, -7], ['safety_shower', 21.3, -11],
+  ['bookshelf', -39.6, 5, H], ['bookshelf', -16.2, 2.4], ['locker', -9.5, 13.65, PI], ['fan', -1, 13.4], ['arcade', 39.3, -11.5, -H],
+];
+
+const walls = [], props = [], npcs = [], signs = [];
+const staticG = new THREE.Group();
+
+function wallSeg(x0, x1, z0, z1, kind) {
+  walls.push({ x0, x1, z0, z1 });
+  const w = x1 - x0, d = z1 - z0, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+  if (kind === 'back') staticG.add(box(w, 3.4, d, 0xe9e6df, cx, 1.7, cz));
+  else if (kind === 'side') staticG.add(box(w, 1.0, d, 0xd6d2ca, cx, 0.5, cz));
+  else if (kind === 'front') staticG.add(box(w, 0.45, d, 0x8a93a3, cx, 0.225, cz));
+  else if (kind === 'glass') {
+    staticG.add(box(w, 0.12, d, 0x9ca3af, cx, 0.06, cz, METAL));
+    const gl = box(w, 1.9, d * 0.4, 0xbfdbfe, cx, 1.07, cz, GLASS); gl.castShadow = false; staticG.add(gl);
+    staticG.add(box(w, 0.05, d, 0x9ca3af, cx, 2.05, cz, METAL));
+  } else { // 칸막이: 아래는 벽, 위는 유리
+    staticG.add(box(w, 1.0, d, 0xd9d4cc, cx, 0.5, cz));
+    const gl = box(w, 0.85, d * 0.4, 0xbfdbfe, cx, 1.43, cz, GLASS); gl.castShadow = false; staticG.add(gl);
+    staticG.add(box(w, 0.05, d, 0x9ca3af, cx, 1.88, cz, METAL));
+  }
+}
+function wallX(z, x0, x1, gaps, kind) {
+  let cur = x0;
+  for (const [g0, g1] of [...gaps].sort((a, b) => a[0] - b[0])) { if (g0 > cur) wallSeg(cur, g0, z - 0.1, z + 0.1, kind); cur = Math.max(cur, g1); }
+  if (cur < x1) wallSeg(cur, x1, z - 0.1, z + 0.1, kind);
+}
+function wallZ(x, z0, z1, gaps, kind) {
+  let cur = z0;
+  for (const [g0, g1] of [...gaps].sort((a, b) => a[0] - b[0])) { if (g0 > cur) wallSeg(x - 0.1, x + 0.1, cur, g0, kind); cur = Math.max(cur, g1); }
+  if (cur < z1) wallSeg(x - 0.1, x + 0.1, cur, z1, kind);
+}
+function addPlane(tex, w, h, x, y, z, rotY = 0, basic = true, keepRef) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), basic ? new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }) : new THREE.MeshStandardMaterial({ map: tex }));
+  m.position.set(x, y, z); m.rotation.y = rotY;
+  scene.add(m);
+  if (keepRef) signs.push({ mesh: m, ...keepRef });
+  return m;
+}
+
+function buildWorld() {
+  // 바닥
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(260, 220), mat(0x1e2330));
+  ground.rotation.x = -H; ground.position.y = -0.02; scene.add(ground);
+  for (const zn of ZONES) {
+    const w = zn.x1 - zn.x0, d = zn.z1 - zn.z0;
+    const geo = new THREE.PlaneGeometry(w, d);
+    const uv = geo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * w / 4, uv.getY(i) * d / 4);
+    const fl = new THREE.Mesh(geo, floorMat(zn.floor));
+    fl.rotation.x = -H; fl.position.set((zn.x0 + zn.x1) / 2, 0, (zn.z0 + zn.z1) / 2); fl.receiveShadow = true;
+    staticG.add(fl);
+  }
+  // 외벽
+  const X = MAP_X;
+  wallSeg(-X - 0.3, X + 0.3, -14.3, -14, 'back');
+  wallSeg(-X - 0.3, -X, -14, 14.3, 'side'); wallSeg(X, X + 0.3, -14, 14.3, 'side');
+  wallSeg(-X, X, 14, 14.3, 'front');
+  // 복도 양쪽 칸막이 (문 구멍 포함)
+  const gapsOf = north => ZONES.filter(z => z.north === north && z.id !== 'hall' && !z.locked)
+    .flatMap(z => z.doors.map(x => [x - (z.doorW || 2.2) / 2, x + (z.doorW || 2.2) / 2]));
+  wallX(-2, -X, X, gapsOf(true), 'part');
+  wallX(2, -X, X, gapsOf(false), 'part');
+  for (const x of [-40, -16, -4, 22, 40]) wallZ(x, -14, -2, [], 'part');
+  for (const x of [-40, -26, 2, 14, 26, 40]) wallZ(x, 2, 14, [], 'part');
+  // 클린룸 탈의실(유리) / NMR실(유리) / 서버 케이지(유리)
+  wallX(-9, -64, -56, [[-59.2, -57.2]], 'glass'); wallZ(-56, -14, -9, [], 'glass');
+  wallZ(59.6, -14, -9.5, [], 'glass'); wallX(-9.5, 59.6, 64, [[61, 62.6]], 'glass');
+  wallX(4.5, 48.5, 64, [[48.5, 50.5]], 'glass'); wallZ(48.5, 4.5, 14, [], 'glass');
+  // 유리방 (세포배양실 / 저울실)
+  wallZ(-32, -14, -8, [], 'glass'); wallX(-8, -40, -32, [[-36.9, -35.1]], 'glass');
+  wallZ(16, -14, -9, [], 'glass'); wallX(-9, 16, 22, [[18.1, 19.9]], 'glass');
+
+  // 뒷벽 창문 (창밖 도시 풍경)
+  const winMat = new THREE.MeshBasicMaterial({ map: windowTex, color: 0xdddddd });
+  const frame = mat(0x9ca3af, METAL);
+  for (const zn of ZONES.filter(z => z.north && z.id !== 'lobby')) {
+    for (let x = zn.x0 + 2; x <= zn.x1 - 2; x += 3) {
+      const win = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 1.3), winMat);
+      win.position.set(x, 1.75, -13.985); staticG.add(win);
+      staticG.add(box(2.5, 0.06, 0.04, frame, x, 2.42, -13.98)); staticG.add(box(2.5, 0.06, 0.04, frame, x, 1.08, -13.98));
+      staticG.add(box(0.05, 1.3, 0.04, frame, x, 1.75, -13.98));
+    }
+  }
+  // 부서 간판
+  for (const zn of ZONES.filter(z => z.id !== 'hall' && z.id !== 'lobby')) {
+    const cx = (zn.x0 + zn.x1) / 2;
+    if (zn.north) addPlane(signTex('', zn), 3.6, 0.9, cx, 2.9, -13.97, 0, true, { zone: zn, kind: 'sign' });
+    else if (!zn.locked) for (const dx of zn.doors) addPlane(signTex('', zn), 1.6, 0.4, dx, 2.15, 2.12, 0, true, { zone: zn, kind: 'sign' });
+  }
+  // 로비: 회사 로고 + 엘리베이터
+  addPlane(logoTex('(주)한숨제약'), 3.4, 1.33, -10, 2.2, -13.97, 0, true, { kind: 'logo' });
+  for (const ex of [-13.4, -6.6]) {
+    staticG.add(box(1.7, 2.4, 0.08, 0x6b7280, ex, 1.2, -13.95, METAL));
+    staticG.add(box(0.7, 2.2, 0.05, 0xcbd5e1, ex - 0.36, 1.1, -13.9, METAL));
+    staticG.add(box(0.7, 2.2, 0.05, 0xcbd5e1, ex + 0.36, 1.1, -13.9, METAL));
+    staticG.add(box(0.4, 0.18, 0.03, 0x111827, ex, 2.55, -13.94, { e: 0xf97316, ei: 1 }));
+    staticG.add(box(0.08, 0.16, 0.03, 0x111827, ex + 1.0, 1.2, -13.94));
+  }
+  // 벽 포스터
+  const POSTERS = [
+    [-34.5, '안전제일', ['보호구 착용', '필수!'], '#16a34a'], [-25.6, 'GMP', ['우리의 약속', '품질은 생명'], '#2563eb'],
+    [-18.6, '음식물', ['실험실 내', '반입 금지'], '#dc2626'], [-1.5, 'ALCOA+', ['데이터', '무결성'], '#7c3aed'],
+    [4.4, 'OOS', ['발생 시', '즉시 보고'], '#ea580c'], [15.9, '감사 D-7', ['문서 정리', '철저히'], '#be123c'],
+    [24.5, '공지', ['컵은 각자', '씻읍시다'], '#0891b2'], [32.5, '과자', ['1인 1개', '양심껏'], '#ca8a04'],
+    [-55.4, '클린룸', ['방진복', '착용 필수'], '#2563eb'], [-49.0, '수율', ['목표 99%', '달성!'], '#16a34a'],
+    [59.0, '예약제', ['장비 사용', '예약 필수'], '#0ea5e9'], [63.2, '⚠ 자석', ['금속 반입', '절대 금지'], '#dc2626'],
+  ];
+  for (const [x, t, l, c] of POSTERS) addPlane(posterTex(t, l, c), 0.55, 0.78, x, 1.75, -13.975, 0, false);
+
+  for (const [type, x, z, rot, opt] of LAYOUT) addProp(type, x, z, rot || 0, opt);
+  bake(staticG); outline(staticG, 'wall'); scene.add(staticG);
+}
+
+function addProp(type, x, z, rot, opt) {
+  const def = PROPS[type];
+  const g = new THREE.Group(); def.build(g, opt);
+  const parts = [];
+  for (const ch of g.children) {
+    if (!ch.isMesh) continue;
+    ch.updateMatrix();
+    if (!ch.geometry.boundingBox) ch.geometry.computeBoundingBox();
+    const bb = ch.geometry.boundingBox.clone().applyMatrix4(ch.matrix);
+    parts.push({ mat: ch.material, c: bb.getCenter(new THREE.Vector3()), s: bb.getSize(new THREE.Vector3()) });
+  }
+  bake(g); outline(g, 'prop');
+  g.position.set(x, 0, z); g.rotation.y = rot;
+  scene.add(g);
+  const swap = Math.abs(Math.sin(rot)) > 0.5;
+  const p = { type, def, g, x, z, vx: 0, vz: 0, hp: def.hp, alive: true, parts, opt,
+    hw: (swap ? def.d : def.w) / 2, hd: (swap ? def.w : def.d) / 2, wobble: 0, hitCD: 0 };
+  props.push(p);
+  return p;
+}
+const propBox = p => ({ x0: p.x - p.hw, x1: p.x + p.hw, z0: p.z - p.hd, z1: p.z + p.hd });
+
+/* =====================================================================
+   8. 충돌
+   ===================================================================== */
+function pushOutCircle(pos, r, b) {
+  const cx = clamp(pos.x, b.x0, b.x1), cz = clamp(pos.z, b.z0, b.z1);
+  const dx = pos.x - cx, dz = pos.z - cz, d2 = dx * dx + dz * dz;
+  if (d2 >= r * r) return null;
+  if (d2 > 1e-6) {
+    const d = Math.sqrt(d2), nx = dx / d, nz = dz / d;
+    pos.x += nx * (r - d); pos.z += nz * (r - d);
+    return { nx, nz };
+  }
+  const l = pos.x - b.x0, rr = b.x1 - pos.x, t = pos.z - b.z0, bb = b.z1 - pos.z, m = Math.min(l, rr, t, bb);
+  if (m === l) { pos.x = b.x0 - r; return { nx: -1, nz: 0 }; }
+  if (m === rr) { pos.x = b.x1 + r; return { nx: 1, nz: 0 }; }
+  if (m === t) { pos.z = b.z0 - r; return { nx: 0, nz: -1 }; }
+  pos.z = b.z1 + r; return { nx: 0, nz: 1 };
+}
+function pushOutBox(p, b) {
+  const ox = Math.min(p.x + p.hw - b.x0, b.x1 - (p.x - p.hw));
+  const oz = Math.min(p.z + p.hd - b.z0, b.z1 - (p.z - p.hd));
+  if (ox <= 0 || oz <= 0) return;
+  if (ox < oz) { p.x += p.x < (b.x0 + b.x1) / 2 ? -ox : ox; p.vx *= -0.3; }
+  else { p.z += p.z < (b.z0 + b.z1) / 2 ? -oz : oz; p.vz *= -0.3; }
+}
+function distToBox(pos, b) {
+  const cx = clamp(pos.x, b.x0, b.x1), cz = clamp(pos.z, b.z0, b.z1);
+  return { d: Math.hypot(pos.x - cx, pos.z - cz), cx, cz };
+}
+function bounce(v, n, e) {
+  const dot = v.x * n.nx + v.z * n.nz;
+  if (dot < 0) { v.x -= (1 + e) * dot * n.nx; v.z -= (1 + e) * dot * n.nz; }
+}
+function resolveChar(c, flying) {
+  for (const w of walls) { const n = pushOutCircle(c.pos, c.r, w); if (n && flying) bounce(c.vel, n, 0.4); }
+  for (const p of props) {
+    if (!p.alive) continue;
+    const n = pushOutCircle(c.pos, c.r, propBox(p));
+    if (n && flying) {
+      const sp = Math.hypot(c.vel.x, c.vel.z);
+      if (sp > 4 && p.hitCD <= 0) { p.hitCD = 0.3; damageProp(p, -n.nx, -n.nz, 1, true); }
+      bounce(c.vel, n, 0.3);
+    }
+  }
+  c.pos.x = clamp(c.pos.x, -MAP_X + 0.3, MAP_X - 0.3); c.pos.z = clamp(c.pos.z, -13.7, 13.7);
+}
+function insideAnyProp(x, z, r) {
+  return props.some(p => p.alive && distToBox({ x, z }, propBox(p)).d < r + 0.15);
+}
+
+// ---------- 길 찾기: 맵을 0.5m 칸으로 나눠 벽·기물 칸을 막고 A*로 돌아가는 길을 찾음 ----------
+const NAV = { cell: 0.5, x0: -MAP_X, z0: -14, w: MAP_X * 4, h: 56, blocked: null, t: 0 };
+function buildNav() {
+  const { cell, x0, z0, w, h } = NAV, r = 0.28; // 사람 반지름만큼 벽을 부풀림
+  const b = NAV.blocked || (NAV.blocked = new Uint8Array(w * h));
+  b.fill(0);
+  const mark = (bx0, bx1, bz0, bz1) => {
+    const i0 = Math.max(0, Math.floor((bx0 - r - x0) / cell)), i1 = Math.min(w - 1, Math.floor((bx1 + r - x0) / cell - 1e-6));
+    const j0 = Math.max(0, Math.floor((bz0 - r - z0) / cell)), j1 = Math.min(h - 1, Math.floor((bz1 + r - z0) / cell - 1e-6));
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) b[j * w + i] = 1;
+  };
+  for (const wl of walls) mark(wl.x0, wl.x1, wl.z0, wl.z1);
+  for (const pr of props) if (pr.alive) { const bb = propBox(pr); mark(bb.x0, bb.x1, bb.z0, bb.z1); }
+}
+const navIdx = (x, z) => {
+  const i = clamp(Math.floor((x - NAV.x0) / NAV.cell), 0, NAV.w - 1), j = clamp(Math.floor((z - NAV.z0) / NAV.cell), 0, NAV.h - 1);
+  return j * NAV.w + i;
+};
+const navPt = k => ({ x: NAV.x0 + (k % NAV.w + 0.5) * NAV.cell, z: NAV.z0 + (Math.floor(k / NAV.w) + 0.5) * NAV.cell });
+const navFree = (x, z) => !NAV.blocked || !NAV.blocked[navIdx(x, z)];
+function nearestFree(k) { // 막힌 칸이면 가장 가까운 빈 칸
+  const b = NAV.blocked, w = NAV.w, i0 = k % w, j0 = Math.floor(k / w);
+  if (!b[k]) return k;
+  for (let rr = 1; rr < 8; rr++) for (let dj = -rr; dj <= rr; dj++) for (let di = -rr; di <= rr; di++) {
+    if (Math.max(Math.abs(di), Math.abs(dj)) !== rr) continue;
+    const i = i0 + di, j = j0 + dj;
+    if (i >= 0 && j >= 0 && i < w && j < NAV.h && !b[j * w + i]) return j * w + i;
+  }
+  return -1;
+}
+// 두 점 사이에 막힌 칸이 없으면 직선으로 가도 됨
+function navClear(ax, az, bx, bz) {
+  const d = Math.hypot(bx - ax, bz - az), n = Math.ceil(d / (NAV.cell * 0.5));
+  for (let i = 1; i < n; i++) if (NAV.blocked[navIdx(ax + (bx - ax) * i / n, az + (bz - az) * i / n)]) return false;
+  return true;
+}
+const navG = new Float32Array(NAV.w * NAV.h), navFrom = new Int32Array(NAV.w * NAV.h), navSeen = new Uint32Array(NAV.w * NAV.h);
+let navStamp = 0;
+function findPath(sx, sz, tx, tz) {
+  if (!NAV.blocked) return null;
+  const w = NAV.w, b = NAV.blocked;
+  const s0 = nearestFree(navIdx(sx, sz)), g0 = nearestFree(navIdx(tx, tz));
+  if (s0 < 0 || g0 < 0) return null;
+  if (navClear(sx, sz, tx, tz) && !b[navIdx(tx, tz)]) return [{ x: tx, z: tz }];
+  const stamp = ++navStamp, gx = g0 % w, gz = Math.floor(g0 / w);
+  const heap = [], hf = []; // 최소 힙 (f값 기준)
+  const push = (k, f) => {
+    let i = heap.length; heap.push(k); hf.push(f);
+    while (i > 0) { const pa = (i - 1) >> 1; if (hf[pa] <= f) break; heap[i] = heap[pa]; hf[i] = hf[pa]; i = pa; }
+    heap[i] = k; hf[i] = f;
+  };
+  const pop = () => {
+    const top = heap[0], lk = heap.pop(), lf = hf.pop();
+    if (heap.length) {
+      let i = 0;
+      for (;;) {
+        let c = 2 * i + 1; if (c >= heap.length) break;
+        if (c + 1 < heap.length && hf[c + 1] < hf[c]) c++;
+        if (hf[c] >= lf) break;
+        heap[i] = heap[c]; hf[i] = hf[c]; i = c;
+      }
+      heap[i] = lk; hf[i] = lf;
+    }
+    return top;
+  };
+  const hfn = k => { const dx = Math.abs(k % w - gx), dz = Math.abs(Math.floor(k / w) - gz); return Math.max(dx, dz) + 0.414 * Math.min(dx, dz); };
+  navSeen[s0] = stamp; navG[s0] = 0; navFrom[s0] = -1; push(s0, hfn(s0));
+  let found = false, iter = 0;
+  while (heap.length && iter++ < 16000) {
+    const k = pop();
+    if (k === g0) { found = true; break; }
+    const ki = k % w, kj = Math.floor(k / w);
+    for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+      if (!di && !dj) continue;
+      const i = ki + di, j = kj + dj;
+      if (i < 0 || j < 0 || i >= w || j >= NAV.h) continue;
+      const nk = j * w + i;
+      if (b[nk] || (di && dj && (b[kj * w + i] || b[j * w + ki]))) continue; // 모서리 대각선 통과 금지
+      const g = navG[k] + (di && dj ? 1.414 : 1);
+      if (navSeen[nk] === stamp && navG[nk] <= g) continue;
+      navSeen[nk] = stamp; navG[nk] = g; navFrom[nk] = k; push(nk, g + hfn(nk));
+    }
+  }
+  if (!found) return null;
+  const cells = [];
+  for (let k = g0; k !== -1; k = navFrom[k]) cells.push(navPt(k));
+  cells.reverse();
+  if (!b[navIdx(tx, tz)]) cells[cells.length - 1] = { x: tx, z: tz };
+  // 보이는 곳까지는 건너뛰어서 지그재그 없이 매끈하게
+  const out = [];
+  let cx = sx, cz = sz, i = 0;
+  while (i < cells.length) {
+    let j = cells.length - 1;
+    while (j > i && !navClear(cx, cz, cells[j].x, cells[j].z)) j--;
+    out.push(cells[j]); cx = cells[j].x; cz = cells[j].z; i = j + 1;
+  }
+  return out;
+}
+// 다음에 향할 지점 (목표가 크게 바뀌거나 1초마다 길을 다시 찾음)
+function navNext(c, tx, tz) {
+  if (!c.path || Math.hypot(c.goalX - tx, c.goalZ - tz) > 0.8 || T > c.pathT) {
+    const path = findPath(c.pos.x, c.pos.z, tx, tz);
+    c.noPath = !path; // 갈 수 없는 곳 (돌아다니기면 목적지를 바꿈)
+    c.path = path || [{ x: tx, z: tz }];
+    c.goalX = tx; c.goalZ = tz; c.pathT = T + 1 + Math.random() * 0.5;
+  }
+  while (c.path.length > 1 && Math.hypot(c.path[0].x - c.pos.x, c.path[0].z - c.pos.z) < 0.3) c.path.shift();
+  return c.path[0];
+}
+
+/* =====================================================================
+   9. 캐릭터 (사람) 만들기
+   ===================================================================== */
+const SKIN = [0xf3cfb3, 0xe8b98f, 0xd6a074, 0xb98258];
+function addHair(head, style, color) {
+  const m = mat(color, { r: style === 'slick' ? 0.3 : 0.9 });
+  const cap = (r = 0.128, tilt = -0.35, theta = H) => {
+    const h = new THREE.Mesh(new THREE.SphereGeometry(r, 16, 10, 0, PI * 2, 0, theta), m);
+    h.scale.set(0.95, 1.08, 1.02); h.position.y = 0.012; h.rotation.x = tilt; head.add(shade(h)); return h;
+  };
+  const ball = (r, x, y, z) => { const b = sph(r, m, x, y, z); head.add(b); return b; };
+  switch (style) {
+    case 'short': cap(); break;
+    case 'buzz': cap(0.123, -0.3); break;
+    case 'sidepart': cap(); ball(0.05, -0.06, 0.1, 0.06).scale.set(1.2, 0.6, 1); break;
+    case 'slick': cap(0.13, -0.25); head.add(box(0.02, 0.01, 0.12, 0x000000, 0.05, 0.128, 0.0)); break;
+    case 'messy': cap(); for (let i = 0; i < 7; i++) ball(0.04, rand(-0.08, 0.08), rand(0.09, 0.13), rand(-0.06, 0.07)); break;
+    case 'curly': case 'perm': {
+      const n = style === 'perm' ? 26 : 18, rr = style === 'perm' ? 0.05 : 0.043;
+      cap(0.125);
+      for (let i = 0; i < n; i++) { const a = rand(0, PI * 2), e = rand(0.1, 1.2); ball(rr, Math.cos(a) * Math.cos(e) * 0.12, 0.03 + Math.sin(e) * 0.11, Math.sin(a) * Math.cos(e) * 0.12 - 0.02); }
+      break;
+    }
+    case 'long': cap(); head.add(rbox(0.25, 0.34, 0.08, 0.03, m, 0, -0.1, -0.09)); head.add(rbox(0.05, 0.26, 0.1, 0.02, m, -0.115, -0.07, -0.02)); head.add(rbox(0.05, 0.26, 0.1, 0.02, m, 0.115, -0.07, -0.02)); break;
+    case 'ponytail': cap(); ball(0.05, 0, 0.04, -0.13); head.add(capsule(0.035, 0.16, m, 0, -0.08, -0.16)); break;
+    case 'bun': cap(); ball(0.065, 0, 0.11, -0.09); break;
+    case 'bob': cap(0.13, -0.3); head.add(rbox(0.05, 0.17, 0.2, 0.02, m, -0.115, -0.04, -0.02)); head.add(rbox(0.05, 0.17, 0.2, 0.02, m, 0.115, -0.04, -0.02)); head.add(rbox(0.22, 0.17, 0.06, 0.02, m, 0, -0.04, -0.11)); break;
+    case 'balding': {
+      const t = new THREE.Mesh(new THREE.TorusGeometry(0.115, 0.028, 6, 16, PI * 1.35), m);
+      t.rotation.set(H, 0, PI * 0.825); t.position.y = 0.01; head.add(shade(t));
+      break;
+    }
+    default: break; // bald
+  }
+}
+function makeFace(head, L) {
+  const F = new THREE.Group(); head.add(F);
+  const white = mat(0xffffff, { r: 0.3 }), black = mat(0x1a1a1a, { r: 0.3 });
+  const browM = mat(L.brow ?? (L.hair ? L.hair[1] : 0x2b1d0e), { r: 0.9 });
+  const eye = x => {
+    const e = new THREE.Group(); e.position.set(x, 0.022, 0.104);
+    const w = new THREE.Mesh(sphGeo(0.021), white); w.scale.set(1, 0.85, 0.6);
+    const p = new THREE.Mesh(sphGeo(0.012), black); p.position.z = 0.012;
+    e.add(w, p); F.add(e); return e;
+  };
+  const X = x => {
+    const g = new THREE.Group(); g.position.set(x, 0.022, 0.114);
+    const a = box(0.036, 0.008, 0.004, black); a.rotation.z = 0.75;
+    const b = box(0.036, 0.008, 0.004, black); b.rotation.z = -0.75;
+    g.add(a, b); g.visible = false; F.add(g); return g;
+  };
+  const browL = box(0.048, 0.012, 0.012, browM, -0.045, 0.062, 0.108), browR = box(0.048, 0.012, 0.012, browM, 0.045, 0.062, 0.108);
+  const mouth = box(0.05, 0.011, 0.012, mat(0x8f3f35), 0, -0.056, 0.105);
+  const mouthO = new THREE.Mesh(sphGeo(0.02), mat(0x3b1d1d)); mouthO.scale.set(1, 1, 0.4); mouthO.position.set(0, -0.06, 0.104); mouthO.visible = false;
+  F.add(browL, browR, mouth, mouthO);
+  return { root: F, eyeL: eye(-0.042), eyeR: eye(0.042), xL: X(-0.042), xR: X(0.042), browL, browR, mouth, mouthO };
+}
+function setFace(c, e) {
+  if (c.face === e) return;
+  c.face = e;
+  const F = c.F, ko = e === 'ko';
+  F.eyeL.visible = F.eyeR.visible = !ko; F.xL.visible = F.xR.visible = ko;
+  const open = e === 'scared' || e === 'yell' || ko;
+  F.mouth.visible = !open; F.mouthO.visible = open;
+  F.mouthO.scale.set(e === 'yell' ? 1.5 : 1, e === 'yell' ? 1.6 : 1, 0.4);
+  const tilt = e === 'angry' || e === 'yell' ? 0.45 : e === 'scared' ? -0.4 : 0;
+  F.browL.rotation.z = -tilt; F.browR.rotation.z = tilt;
+  F.browL.position.y = F.browR.position.y = e === 'scared' ? 0.072 : 0.062;
+}
+
+// L: { h, build, female, skin, hair:[style,color], outfit:{type,c1,c2,tie,rolled,skirt}, pants, shoes, glasses, facial:[kind,color], acc:[], hold }
+function makeHuman(L) {
+  const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
+  const s = L.h || 1; body.scale.setScalar(s);
+  const heavy = L.build === 'heavy', slim = L.build === 'slim', fem = !!L.female;
+  const tw = (heavy ? 1.22 : slim ? 0.9 : 1) * (fem ? 0.88 : 1);
+  const depth = heavy ? 1.15 : 1;
+  const skin = mat(L.skin ?? SKIN[0], { r: 0.6 });
+  const o = L.outfit || { type: 'shirt', c1: 0x93c5fd };
+  const topM = L.topMat || mat(o.type === 'labcoat' ? 0xf8f8f6 : o.c1, { r: 0.85 });
+  const pantsM = mat(L.pants ?? 0x2d3343, { r: 0.85 });
+  const shoeM = mat(L.shoes ?? 0x1a1a1a, { r: 0.45 });
+  const hipY = 0.9, front = 0.16 * 0.72 * depth;
+
+  // 다리
+  const mkLeg = x => {
+    const p = new THREE.Group(); p.position.set(x, hipY, 0);
+    p.add(capsule(heavy ? 0.08 : 0.068, 0.66, pantsM, 0, -0.42, 0));
+    p.add(rbox(0.11, 0.07, 0.25, 0.03, shoeM, 0, -0.865, 0.04));
+    body.add(p); return p;
+  };
+  const legL = mkLeg(-0.095 * tw), legR = mkLeg(0.095 * tw);
+  if (o.skirt) { const sk = cyl(0.16 * tw, 0.22 * tw, 0.42, o.skirt, 0, hipY - 0.18, 0); sk.scale.z = 0.8; body.add(sk); }
+  body.add(rbox(0.34 * tw, 0.16, 0.2 * depth, 0.06, o.skirt ? o.skirt : pantsM, 0, hipY + 0.02, 0));
+
+  // 몸통
+  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.16, 0.3, 4, 12), topM);
+  torso.scale.set(1.2 * tw, 1, 0.72 * depth); torso.position.y = hipY + 0.34; body.add(shade(torso));
+  if (heavy) { const belly = sph(0.18, topM, 0, hipY + 0.2, 0.07); belly.scale.set(1.15, 1, 1); body.add(belly); }
+  const chest = (w, h, c, y, z = front + 0.006) => body.add(box(w, h, 0.012, c, 0, y, z));
+  if (o.type === 'suit') {
+    chest(0.11, 0.24, 0xf8fafc, hipY + 0.53);
+    for (const sx of [-1, 1]) { const l = box(0.05, 0.22, 0.014, mat(o.c1, { r: 0.6 }), sx * 0.055, hipY + 0.52, front + 0.012); l.rotation.z = sx * 0.35; body.add(l); }
+    body.add(box(0.025, 0.025, 0.012, 0x111111, 0, hipY + 0.28, front + 0.01));
+  } else if (o.type === 'labcoat') {
+    chest(0.09, 0.42, o.c2 ?? 0x93c5fd, hipY + 0.45);
+    const skirtM = topM;
+    const coat = cyl(0.17 * tw * 1.15, 0.22 * tw * 1.15, 0.46, skirtM, 0, hipY - 0.15, 0); coat.scale.z = 0.78 * depth; body.add(coat);
+    body.add(box(0.07, 0.06, 0.012, 0xe5e7eb, 0.1 * tw, hipY + 0.45, front + 0.008));
+    body.add(box(0.008, 0.06, 0.008, 0x2563eb, 0.115 * tw, hipY + 0.49, front + 0.014));
+  } else if (o.type === 'cardigan') {
+    chest(0.08, 0.5, o.c2 ?? 0xffffff, hipY + 0.38);
+    for (let i = 0; i < 4; i++) body.add(box(0.015, 0.015, 0.01, 0x78350f, 0.05, hipY + 0.25 + i * 0.1, front + 0.012));
+  } else if (o.type === 'hoodie') {
+    const hood = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.045, 8, 14), topM); hood.position.set(0, hipY + 0.66, -0.05); hood.rotation.x = H * 0.8; body.add(shade(hood));
+    body.add(box(0.2, 0.1, 0.012, mat(o.c1, { r: 1 }), 0, hipY + 0.2, front + 0.01));
+    for (const sx of [-1, 1]) body.add(box(0.008, 0.12, 0.008, 0xffffff, sx * 0.04, hipY + 0.55, front + 0.012));
+  } else if (o.type === 'uniform') {
+    body.add(box(0.05, 0.06, 0.012, 0xd4a017, -0.08, hipY + 0.5, front + 0.008, METAL));
+    body.add(box(0.36 * tw, 0.05, 0.25 * depth, 0x111111, 0, hipY + 0.12, 0));
+    for (const sx of [-1, 1]) body.add(box(0.08, 0.05, 0.012, mat(o.c1), sx * 0.08, hipY + 0.44, front + 0.006));
+  } else if (o.type === 'apron') {
+    body.add(box(0.28 * tw, 0.55, 0.012, o.c2 ?? 0xf9a8d4, 0, hipY + 0.2, front + 0.02));
+    body.add(box(0.2, 0.08, 0.014, 0xffffff, 0, hipY + 0.15, front + 0.03));
+  } else if (o.type === 'blouse') {
+    chest(0.12, 0.05, 0xffffff, hipY + 0.62);
+  }
+  if (o.tie) {
+    body.add(box(0.05, 0.3, 0.012, o.tie, 0, hipY + 0.42, front + 0.016));
+    body.add(box(0.06, 0.04, 0.02, o.tie, 0, hipY + 0.6, front + 0.014));
+  }
+  if ((L.acc || []).includes('badge')) {
+    for (const sx of [-1, 1]) { const st = box(0.012, 0.22, 0.006, 0x1e3a8a, sx * 0.05, hipY + 0.55, front + 0.022); st.rotation.z = sx * -0.25; body.add(st); }
+    body.add(box(0.055, 0.075, 0.006, 0xffffff, 0, hipY + 0.41, front + 0.026));
+  }
+
+  // 목, 머리
+  body.add(cyl(0.048, 0.048, 0.1, skin, 0, hipY + 0.69, 0));
+  const head = new THREE.Group(); head.position.set(0, hipY + 0.83, 0); body.add(head);
+  const skull = sph(0.12, skin); skull.scale.set(0.92, 1.06, 1); head.add(skull);
+  head.add(sph(0.028, skin, -0.11, 0, 0)); head.add(sph(0.028, skin, 0.11, 0, 0));
+  head.add(rbox(0.028, 0.048, 0.04, 0.01, skin, 0, -0.008, 0.116));
+  if (L.hair) addHair(head, L.hair[0], L.hair[1]);
+  if (L.facial) {
+    const fm = mat(L.facial[1], { r: 0.9 });
+    if (L.facial[0] === 'mustache') head.add(rbox(0.075, 0.018, 0.02, 0.008, fm, 0, -0.036, 0.118));
+    if (L.facial[0] === 'beard' || L.facial[0] === 'stubble') {
+      const bd = new THREE.Mesh(new THREE.SphereGeometry(L.facial[0] === 'beard' ? 0.126 : 0.1215, 14, 8, 0, PI * 2, PI * 0.58, PI * 0.42), L.facial[0] === 'stubble' ? mat(L.facial[1], { r: 1, op: 0.55 }) : fm);
+      bd.scale.set(0.93, 1.06, 1.01); head.add(bd);
+    }
+  }
+  if (L.glasses != null) {
+    const gm = mat(L.glasses, { r: 0.3, m: 0.5 });
+    for (const sx of [-1, 1]) {
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(0.027, 0.0045, 6, 16), gm); rim.position.set(sx * 0.042, 0.022, 0.119); head.add(rim);
+      head.add(box(0.005, 0.005, 0.11, gm, sx * 0.085, 0.025, 0.065));
+    }
+    head.add(box(0.03, 0.005, 0.005, gm, 0, 0.026, 0.12));
+  }
+  const acc = L.acc || [];
+  if (acc.includes('goggles')) {
+    const band = new THREE.Mesh(new THREE.TorusGeometry(0.122, 0.01, 6, 20), mat(0x1f2937)); band.rotation.x = H; band.position.y = 0.075; head.add(band);
+    head.add(rbox(0.16, 0.05, 0.03, 0.015, mat(0xa5f3fc, { r: 0.1, op: 0.6 }), 0, 0.075, 0.115));
+  }
+  if (acc.includes('headset')) {
+    const arc = new THREE.Mesh(new THREE.TorusGeometry(0.135, 0.008, 6, 16, PI), mat(0x111827)); arc.position.y = 0.0; head.add(arc);
+    for (const sx of [-1, 1]) { const cup = cyl(0.03, 0.03, 0.025, 0x111827, sx * 0.13, 0, 0); cup.rotation.z = H; head.add(cup); }
+    const boom = box(0.008, 0.008, 0.11, 0x111827, -0.11, -0.05, 0.06); boom.rotation.y = 0.5; head.add(boom);
+  }
+  if (acc.includes('mask')) head.add(rbox(0.13, 0.055, 0.05, 0.02, mat(0xbfdbfe), 0, -0.1, 0.085));
+  if (acc.includes('cap')) {
+    head.add(cyl(0.128, 0.128, 0.07, 0x1e3a8a, 0, 0.1, 0));
+    head.add(box(0.2, 0.012, 0.1, 0x111827, 0, 0.07, 0.12));
+    head.add(box(0.04, 0.035, 0.005, 0xd4a017, 0, 0.11, 0.129, METAL));
+  }
+  const F = makeFace(head, L);
+
+  // 팔
+  const shX = 0.2 * tw + 0.035;
+  const armM = topM, handM = L.gloves ? mat(0xfacc15, { r: 0.4 }) : skin;
+  const mkArm = x => {
+    const p = new THREE.Group(); p.position.set(x, hipY + 0.58, 0);
+    const r = heavy ? 0.058 : 0.05;
+    if (o.rolled) { p.add(capsule(r, 0.2, armM, 0, -0.14, 0)); p.add(capsule(r * 0.88, 0.22, skin, 0, -0.4, 0)); }
+    else p.add(capsule(r, 0.44, armM, 0, -0.27, 0));
+    p.add(sph(0.047, handM, 0, -0.56, 0));
+    body.add(p); return p;
+  };
+  const armL = mkArm(-shX), armR = mkArm(shX);
+  // 손에 든 물건
+  const hold = L.hold;
+  if (hold === 'mug') { armR.add(cyl(0.035, 0.032, 0.09, 0xffffff, 0, -0.6, 0.05)); }
+  if (hold === 'tumbler') { armR.add(cyl(0.032, 0.028, 0.16, 0x0f766e, 0, -0.6, 0.05, GLOSS)); }
+  if (hold === 'clipboard') { const cb = rbox(0.18, 0.24, 0.012, 0.01, 0x92400e, 0, -0.6, 0.07); cb.rotation.x = -0.3; armL.add(cb); const pp = box(0.15, 0.2, 0.005, 0xffffff, 0, -0.6, 0.08); pp.rotation.x = -0.3; armL.add(pp); }
+  if (hold === 'flask') { armR.add(cyl(0.02, 0.06, 0.12, 0xdbeafe, 0, -0.62, 0.05, GLASS)); armR.add(cyl(0.03, 0.055, 0.05, 0x84cc16, 0, -0.655, 0.05, { op: 0.85, e: 0x65a30d, ei: 0.6 })); }
+  if (hold === 'mop') { armR.add(cyl(0.012, 0.012, 1.45, 0x9ca3af, 0, -1.0, 0.06, METAL)); armR.add(rbox(0.3, 0.06, 0.12, 0.02, 0xe5e7eb, 0, -1.72, 0.06)); }
+  if (hold === 'phone') { armR.add(rbox(0.045, 0.09, 0.012, 0.006, 0x111827, 0, -0.6, 0.04)); }
+
+  for (const grp of [body, head, legL, legR, armL, armR]) bake(grp);
+  F.root.userData.noOutline = true;
+  outline(body, 'char');
+
+  // 기절 별
+  const stars = new THREE.Group();
+  const starM = new THREE.MeshBasicMaterial({ color: 0xffd43b });
+  for (let i = 0; i < 3; i++) { const st = new THREE.Mesh(new THREE.OctahedronGeometry(0.09), starM); st.position.set(Math.cos(i * 2.09) * 0.3, 0, Math.sin(i * 2.09) * 0.3); stars.add(st); }
+  stars.position.set(0, 0.55, -1.5 * s); stars.visible = false; g.add(stars);
+  const h = { g, body, head, legL, legR, armL, armR, F, stars, s, face: null };
+  setFace(h, 'normal');
+  return h;
+}
+
+/* =====================================================================
+   9-2. 3D 모델 캐릭터 (Rodin으로 만든 모델 + Mixamo 뼈대/동작)
+   - 모델 파일은 웹서버(VS Code Live Server)로 열어야 불러와짐
+   - 못 불러오면 도형 캐릭터를 그대로 사용
+   ===================================================================== */
+// models/<이름>/<이름>.fbx + texture.jpg (Rodin 텍스처를 1024 JPG로 줄인 것)
+const MODELS = Object.fromEntries(
+  ['kim', 'kang', 'nam', 'oh', 'han', 'lee', 'mun', 'guard', 'cleaner', 'worker', 'hero_m', 'hero_f']
+    .map(k => [k, { fbx: `models/${k}/${k}.fbx`, tex: `models/${k}/texture.jpg` }]));
+// 모든 캐릭터가 같이 쓰는 동작 (Mixamo 뼈 구조가 같아서 공유 가능). 없는 파일은 건너뜀
+const ANIM_NAMES = ['idle', 'walk', 'run', 'yell', 'fall', 'getup', 'punch', 'hit'];
+const modelLib = {}, clipLib = {};
+
+const PACKED = false; // 배포용 사본에서만 true
+async function loadModels() {
+  if (location.protocol === 'file:') return; // 더블클릭 실행은 브라우저가 파일 읽기를 막음
+  const loader = new FBXLoader(), texLoader = new THREE.TextureLoader();
+  // 배포본(Claude Artifact)은 fbx를 못 올려서 base64 텍스트(<파일>.fbx.txt)로 올리고 여기서 다시 풀어 씀
+  const tryLoad = url => (PACKED
+    ? fetch(url + '.txt').then(r => { if (!r.ok) throw r.status; return r.text(); })
+        .then(t => { const b = atob(t), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return loader.parse(u.buffer, ''); })
+    : loader.loadAsync(url)).catch(() => null);
+  await Promise.all(ANIM_NAMES.map(async name => {
+    const o = await tryLoad(`models/anims/${name}.fbx`);
+    if (o && o.animations[0]) clipLib[name] = prepClip(o.animations[0], name);
+  }));
+  if (!clipLib.idle) return;
+  await Promise.all(Object.entries(MODELS).map(async ([key, m]) => {
+    const o = await tryLoad(m.fbx);
+    if (!o) return;
+    const tex = await texLoader.loadAsync(m.tex).catch(() => null);
+    modelLib[key] = prepModel(o, tex);
+  }));
+  makePunchClips();
+}
+// 샌드백 치기 동작(3초)에서 오른손/왼손이 가장 앞으로 뻗은 순간을 찾아 짧은 잽 2개로 잘라 씀
+// → 대상이 없어도 클릭 한 번에 바로 주먹이 나감
+function makePunchClips() {
+  const lib = Object.values(modelLib)[0], src = clipLib.punch;
+  if (!lib || !src) return;
+  const root = SkeletonUtils.clone(lib.root), mixer = new THREE.AnimationMixer(root);
+  mixer.clipAction(src).play();
+  const bone = n => root.getObjectByName('mixamorig' + n);
+  const hips = bone('Hips'), hands = { R: bone('RightHand'), L: bone('LeftHand') };
+  const best = { R: [0, -Infinity], L: [0, -Infinity] }, v = new THREE.Vector3(), hv = new THREE.Vector3();
+  for (let t = 0; t < src.duration; t += 1 / 30) {
+    mixer.setTime(t); root.updateMatrixWorld(true);
+    root.worldToLocal(hips.getWorldPosition(hv));
+    for (const k in hands) {
+      if (!hands[k]) continue;
+      const reach = root.worldToLocal(hands[k].getWorldPosition(v)).z - hv.z; // 모델은 +z를 바라봄
+      if (reach > best[k][1]) best[k] = [t, reach];
+    }
+  }
+  for (const k in best) {
+    const t = best[k][0];
+    if (best[k][1] === -Infinity) continue;
+    const c = src.clone(); c.name = 'punch' + k;
+    const t0 = Math.max(0, t - 0.2), t1 = Math.min(src.duration, t + 0.25);
+    trimClip(c, t0, t1);
+    clipLib['punch' + k] = c;
+  }
+}
+function trimClip(clip, t0, t1) {
+  for (const tr of clip.tracks) { tr.trim(t0, t1); tr.shift(-t0); }
+  clip.duration = t1 - t0;
+}
+function prepClip(clip, name) {
+  clip.name = name;
+  const hips = clip.tracks.find(t => t.name.endsWith('Hips.position'));
+  if (!hips) return clip;
+  // 동작 자체의 앞뒤 이동은 지움 (이동은 게임 물리가 담당)
+  const v = hips.values, n = hips.times.length;
+  for (let i = 0; i < v.length; i += 3) { v[i] = v[0]; v[i + 2] = v[2]; }
+  // 엉덩이 높이로 "누워 있는 구간"을 찾아서 필요한 부분만 잘라 씀
+  const y = i => v[i * 3 + 1];
+  let lo = 0;
+  for (let i = 1; i < n; i++) if (y(i) < y(lo)) lo = i;
+  const stand = y(n - 1), range = stand - y(lo);
+  if (name === 'fall') trimClip(clip, 0, Math.min(clip.duration, hips.times[lo] + 0.5));
+  if (name === 'getup' && range > 0.2) {
+    let i = n - 1; while (i > 0 && y(i) > y(lo) + range * 0.15) i--;
+    let j = i; while (j < n - 1 && y(j) < stand - range * 0.03) j++;
+    trimClip(clip, hips.times[Math.max(0, i - 6)], Math.min(clip.duration, hips.times[j] + 0.2));
+  }
+  return clip;
+}
+function prepModel(root, tex) {
+  if (tex) { tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4; }
+  root.traverse(o => {
+    if (!o.isMesh) return;
+    smoothNormals(o.geometry);
+    o.material = new THREE.MeshToonMaterial({ map: tex || o.material.map || null, gradientMap: toonRamp });
+    o.castShadow = true; o.receiveShadow = true;
+    o.frustumCulled = false; // 누워 있을 때 화면 밖으로 잘못 판정되는 것 방지
+  });
+  // 키 = 머리끝 뼈 높이 (발은 원점에 있음)
+  root.updateMatrixWorld(true);
+  let height = 0;
+  root.traverse(o => { if (o.isBone && /HeadTop_End/.test(o.name)) height = o.getWorldPosition(new THREE.Vector3()).y; });
+  return { root, tex, height: height > 0 ? height : 1.75 };
+}
+// 법선(표면 방향)을 같은 위치끼리 평균 내서 매끈하게 만듦
+// (모델 파일에 법선이 없거나 텍스처 경계에서 갈라져 있으면 각지게 보이고 외곽선이 끊김)
+function smoothNormals(g) {
+  if (!g.attributes.normal) g.computeVertexNormals();
+  const pos = g.attributes.position, nor = g.attributes.normal, acc = new Map();
+  const key = i => `${Math.round(pos.getX(i) * 1e4)},${Math.round(pos.getY(i) * 1e4)},${Math.round(pos.getZ(i) * 1e4)}`;
+  for (let i = 0; i < pos.count; i++) {
+    const k = key(i), a = acc.get(k) || [0, 0, 0];
+    a[0] += nor.getX(i); a[1] += nor.getY(i); a[2] += nor.getZ(i); acc.set(k, a);
+  }
+  for (let i = 0; i < pos.count; i++) {
+    const a = acc.get(key(i)), l = Math.hypot(a[0], a[1], a[2]) || 1;
+    nor.setXYZ(i, a[0] / l, a[1] / l, a[2] / l);
+  }
+  nor.needsUpdate = true;
+}
+function outlineSkinned(root) {
+  const meshes = [];
+  root.traverse(o => { if (o.isSkinnedMesh) meshes.push(o); });
+  for (const m of meshes) {
+    const ol = new THREE.SkinnedMesh(m.geometry, OUTLINE.char.mat);
+    ol.bind(m.skeleton, m.bindMatrix);
+    ol.position.copy(m.position); ol.quaternion.copy(m.quaternion); ol.scale.copy(m.scale);
+    ol.frustumCulled = false; ol.castShadow = false; ol.userData.noOutline = true;
+    m.parent.add(ol);
+  }
+}
+// 도형 캐릭터의 몸을 숨기고 3D 모델을 붙임 (이름표·별·말풍선 등은 기존 그대로 사용)
+// 색 변형: 피부색 픽셀은 그대로 두고 옷·소품 색만 색상환에서 돌림 (모델 하나로 여러 명 만들기)
+// v = { hue: 회전 각도(도), sat: 채도 배율, light: 밝기 더하기(-1~1), w: 몸 너비 배율 }
+const variantTexCache = new Map();
+function variantTex(key, v) {
+  const id = key + JSON.stringify(v);
+  if (variantTexCache.has(id)) return variantTexCache.get(id);
+  const img = modelLib[key].tex.image, S = 1024;
+  const cv = document.createElement('canvas'); cv.width = cv.height = S;
+  const x = cv.getContext('2d'); x.drawImage(img, 0, 0, S, S);
+  const d = x.getImageData(0, 0, S, S), px = d.data;
+  const col = new THREE.Color(), hsl = {};
+  const dh = (v.hue || 0) / 360, ms = v.sat ?? 1, dl = v.light || 0;
+  for (let i = 0; i < px.length; i += 4) {
+    col.setRGB(px[i] / 255, px[i + 1] / 255, px[i + 2] / 255).getHSL(hsl);
+    const skin = hsl.h < 0.12 && hsl.s > 0.12 && hsl.s < 0.8 && hsl.l > 0.3 && hsl.l < 0.88;
+    if (skin || hsl.s < 0.08) continue; // 피부, 흰색·검정·회색(셔츠, 가운, 머리)은 유지
+    col.setHSL((hsl.h + dh + 1) % 1, clamp(hsl.s * ms, 0, 1), clamp(hsl.l + dl, 0, 1));
+    px[i] = col.r * 255; px[i + 1] = col.g * 255; px[i + 2] = col.b * 255;
+  }
+  x.putImageData(d, 0, 0);
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace; t.flipY = modelLib[key].tex.flipY; t.anisotropy = 4;
+  variantTexCache.set(id, t);
+  return t;
+}
+function attachModel(c, key, v) {
+  const lib = modelLib[key];
+  if (!lib) return;
+  const m = SkeletonUtils.clone(lib.root);
+  m.scale.multiplyScalar(1.82 * c.s / lib.height);
+  if (v) {
+    if (v.w) { m.scale.x *= v.w; m.scale.z *= v.w; }
+    if (lib.tex && (v.hue || v.sat != null || v.light)) {
+      const mt = new THREE.MeshToonMaterial({ map: variantTex(key, v), gradientMap: toonRamp });
+      m.traverse(o => { if (o.isMesh) o.material = mt; });
+    }
+  }
+  outlineSkinned(m);
+  const mixer = new THREE.AnimationMixer(m), acts = {};
+  for (const name in clipLib) acts[name] = mixer.clipAction(clipLib[name]);
+  for (const name of ['fall', 'getup', 'punchR', 'punchL']) if (acts[name]) { acts[name].setLoop(THREE.LoopOnce); acts[name].clampWhenFinished = true; }
+  c.rig = { m, mixer, acts, cur: null };
+  playRig(c, 'idle');
+  c.body.visible = false;
+  c.g.add(m);
+}
+function playRig(c, name, fade = 0.2) {
+  const r = c.rig;
+  if (!r.acts[name]) name = name === 'walk' && r.acts.run ? 'run' : 'idle';
+  const a = r.acts[name];
+  if (r.cur === name) return a;
+  a.reset().play();
+  if (r.cur && r.acts[r.cur] !== a) r.acts[r.cur].crossFadeTo(a, fade, false);
+  r.cur = name;
+  return a;
+}
+function updateRig(c, dt, speed) {
+  const r = c.rig;
+  let want = 'idle';
+  if (c.state === 'knocked') want = 'fall';
+  else if (c.state === 'getup') want = 'getup';
+  else if (c.punchT > -0.25 && r.acts.punchR) want = c.punchSide > 0 ? 'punchR' : 'punchL';
+  else if (speed > 0.1) want = speed > 2.6 || !r.acts.walk ? 'run' : 'walk';
+  else if (c.state === 'angry' || (c.state === 'chase' && c.bubbleT > 0)) want = 'yell';
+  // 일어나는 동작이 끝날 때까지 다시 움직이지 않게 시간 확보
+  if (want === 'getup' && r.cur !== 'getup' && r.acts.getup) c.timer = Math.max(c.timer, r.acts.getup.getClip().duration / 1.6);
+  // 연타: 같은 손이 다시 나가도 처음부터 다시 재생
+  if (c.punchNew) { c.punchNew = false; if (r.cur === want) r.cur = null; }
+  const a = playRig(c, want, want.startsWith('punch') ? 0.06 : 0.2);
+  // 이동 속도에 맞춰 걷기/뛰기 동작 속도 조절 (발 미끄러짐 줄이기)
+  a.timeScale = r.cur === 'run' ? clamp(speed / 4.4, 0.45, 1.5) : r.cur === 'walk' ? speed / 1.4 : r.cur === 'getup' ? 1.6 : r.cur.startsWith('punch') ? 1.3 : 1;
+  r.mixer.update(dt);
+}
+
+/* =====================================================================
+   10. 등장인물
+   ===================================================================== */
+const CAST = [
+  // ----- 연구소 -----
+  { name: '정수석', model: 'kim', variant: { hue: 200, light: -0.05 }, zone: 'rnd', role: 'staff', voice: 0.75,
+    look: { h: 0.98, skin: SKIN[1], hair: ['balding', 0xa1a1aa], glasses: 0xb8860b, facial: ['mustache', 0xa1a1aa], outfit: { type: 'labcoat', c2: 0x93c5fd, tie: 0x7f1d1d }, pants: 0x4b5563 },
+    talk: ['내가 신입 때는 피펫도 입으로 빨았어', '이 데이터... 재현성이 없잖아', '특허 마감이 다음 주야', '요즘 젊은 친구들은 노트를 안 써'],
+    hit: ['허억! 내 허리...', '이 사람이 30년 경력을!', '아이고 내 디스크!'] },
+  { name: '한연구원', model: 'han', zone: 'rnd', role: 'staff', voice: 1.55,
+    look: { h: 0.95, female: true, build: 'slim', skin: SKIN[0], hair: ['ponytail', 0x5a3825], outfit: { type: 'labcoat', c2: 0xf9a8d4 }, pants: 0x334155, acc: ['goggles'], hold: 'flask' },
+    talk: ['세포 계대해야 하는데 시간이...', '클린벤치 쓰실 거면 UV 꼭 켜주세요', '어제 웨스턴 블롯 망했어요', '이 시약 누가 다 썼어요?'],
+    hit: ['꺅! 샘플!', '제 세포가!!', '이거 3주 배양한 건데!'] },
+  { name: '오연구원', model: 'oh', zone: 'rnd', role: 'staff', voice: 1.1,
+    look: { h: 1.0, build: 'slim', skin: SKIN[1], hair: ['curly', 0x111111], outfit: { type: 'labcoat', c2: 0x6b7280 }, pants: 0x1f2937, hold: 'tumbler' },
+    talk: ['3일째 퇴근 못 했어요...', 'PCR 돌려놓고 왔어요', '커피가 혈관에 흐르는 느낌', '실험 노트 쓰기 싫다...'],
+    hit: ['으억', '저 오늘 당직인데...', '안 그래도 피곤한데!'] },
+  { name: '최인턴', model: 'oh', variant: { hue: 110, sat: 1.4, w: 0.94 }, zone: 'rnd', role: 'staff', voice: 1.25,
+    look: { h: 1.05, build: 'slim', skin: SKIN[0], hair: ['messy', 0x3a2a1a], outfit: { type: 'hoodie', c1: 0x16a34a }, pants: 0x1e3a8a, shoes: 0xf5f5f5, acc: ['badge'] },
+    talk: ['저 정규직 전환 될까요?', '피펫팁 어디 있어요?', '교수님이 회사는 다르다고 했는데...', '점심시간 몇 시예요?'],
+    hit: ['저 인턴인데요?!', '계약서에 이런 건 없었는데!', '엄마...!'] },
+  { name: '남팀장', model: 'nam', zone: 'rnd', role: 'manager', voice: 0.9,
+    look: { h: 1.02, skin: SKIN[1], hair: ['sidepart', 0x1b1b1b], glasses: 0x111111, outfit: { type: 'labcoat', c2: 0xe5e7eb, tie: 0x1e3a8a }, pants: 0x1f2937, acc: ['badge'] },
+    talk: ['과제 마일스톤 언제 맞출 건가?', '연구비 정산 서류 내일까지야', '임원 보고가 금요일이야'],
+    hit: ['자, 자네 미쳤나?!', '내가 팀장이야!', '연구윤리위원회에 회부하겠어!'],
+    nag: ['과제 보고서는?!', '내 말 듣고 있나!', '오늘 실험 결과 가져와!', '특허는 언제 낼 건가!'] },
+  // ----- 품질관리팀 -----
+  { name: '김부장', zone: 'qc', role: 'manager', voice: 0.62, model: 'kim',
+    look: { h: 1.0, build: 'heavy', skin: SKIN[2], hair: ['balding', 0x6b7280], glasses: 0x111111, facial: ['mustache', 0x3f3f46], outfit: { type: 'labcoat', c2: 0xffffff, tie: 0xb91c1c }, pants: 0x374151, acc: ['badge'] },
+    talk: ['OOS 또 났어? 원인 조사 보고서 써와', '감사 다음 주야. 다 정리해 놔', '라떼는 말이야, 다 수기로 적었어', '이번 달 일탈이 몇 건이야?'],
+    hit: ['자, 자네 미쳤나?!', '시말서 각오해!', '인사고과 기대하게!', '내가 이 회사 25년차야!'],
+    nag: ['일탈 보고서는?!', 'CAPA는 언제 닫을 건가!', '내 말 듣고 있어?', '오늘 야근이야!', '거기 서!'] },
+  { name: '이대리', model: 'lee', zone: 'qc', role: 'staff', voice: 1.45,
+    look: { h: 0.96, female: true, skin: SKIN[0], hair: ['bob', 0x1c1917], glasses: 0x7c2d12, outfit: { type: 'cardigan', c1: 0xd6c4a8, c2: 0xffffff }, pants: 0x1f2937, hold: 'clipboard', acc: ['badge'] },
+    talk: ['시스템 적합성 또 실패했어요...', '칼럼 또 막혔어요 ㅠ', '이번 달 시험 의뢰가 200건이래요', '시험 기록서 검토 좀 해주세요'],
+    hit: ['악! 제 시험 기록서!', '데이터 무결성 위반이에요!', '이거 일탈이에요!!'] },
+  { name: '박주임', model: 'worker', zone: 'qc', role: 'staff', voice: 1.0,
+    look: { h: 1.0, skin: SKIN[1], hair: ['short', 0x4a2f1f], outfit: { type: 'labcoat', c2: 0x9ca3af }, pants: 0x27272a, acc: ['mask'] },
+    talk: ['GC 헬륨 다 떨어졌대요', '저울 교정 기한 지났어요', '표준품 또 누가 다 썼어?', '가스 실린더 근처에선 조심하세요'],
+    hit: ['으악!', '이거 일탈 보고 써야 해요?', '마스크 벗겨졌잖아요!'] },
+  { name: '서연구원', model: 'han', variant: { hue: 150 }, zone: 'qc', role: 'staff', voice: 1.65,
+    look: { h: 0.93, female: true, build: 'slim', skin: SKIN[0], hair: ['bun', 0x3f2a1d], outfit: { type: 'labcoat', c2: 0x99f6e4 }, pants: 0x475569 },
+    talk: ['용출 시험 6시간째예요', '오늘 점심 뭐예요?', '이 피크... 불순물인가?', 'HPLC 1.5억이래요. 조심하세요'],
+    hit: ['꺄악!', '안정성 샘플 깨졌어요!', '왜요 왜!!'] },
+  // ----- 영업부 -----
+  { name: '강차장', zone: 'sales', role: 'manager', voice: 0.85, model: 'kang',
+    look: { h: 1.04, skin: SKIN[2], hair: ['slick', 0x0a0a0a], outfit: { type: 'suit', c1: 0x1e3a8a, tie: 0xd4a017 }, pants: 0x1e3a8a, shoes: 0x3b1d0e },
+    talk: ['형님~ 이번 달 실적 봤어?', '골프 한 판 콜?', '거래처 사장님이 말이야~', '영업은 인맥이야 인맥!'],
+    hit: ['내 명품 정장!!', '이거 얼마짜린 줄 알아?!', '내 머리 망가졌잖아!'],
+    nag: ['자네 실적이 이게 뭔가!', '오늘 회식이야, 빠지지 마!', '영업은 발로 뛰는 거야!', '거래처 전화 돌렸어?!'] },
+  { name: '윤대리', model: 'lee', variant: { hue: 300, sat: 1.2 }, zone: 'sales', role: 'staff', voice: 1.5,
+    look: { h: 0.97, female: true, skin: SKIN[0], hair: ['long', 0x3b2416], outfit: { type: 'blouse', c1: 0xfdf2f8, skirt: 0x1e293b }, pants: 0xe8b98f, shoes: 0x7f1d1d, acc: ['headset'] },
+    talk: ['네 고객님~ (통화 중)', '이번 분기 인센티브 나오겠죠?', '학회 부스 준비해야 해요', '샘플 신청서 좀 주세요~'],
+    hit: ['꺅! 통화 중이었는데!', '고객님 잠시만요!!', '헤드셋 부러졌잖아요!'] },
+  { name: '조과장', model: 'kang', variant: { sat: 0.15, light: 0.05, w: 1.15 }, zone: 'sales', role: 'staff', voice: 0.8,
+    look: { h: 1.0, build: 'heavy', skin: SKIN[1], hair: ['short', 0x1c1917], facial: ['stubble', 0x27272a], outfit: { type: 'shirt', c1: 0xbfdbfe, tie: 0x475569, rolled: true }, pants: 0x3f3f46 },
+    talk: ['어제 접대하느라 간이...', '점심 국밥 콜?', '차 키 어디 뒀더라', '출장 경비 정산 언제 하지'],
+    hit: ['어이쿠!', '형 아파 임마!', '어제 먹은 거 나올 뻔했네!'] },
+  { name: '배사원', model: 'hero_m', variant: { hue: 170, sat: 1.2, w: 0.92 }, zone: 'sales', role: 'staff', voice: 1.2,
+    look: { h: 1.03, build: 'slim', skin: SKIN[0], hair: ['buzz', 0x1c1917], outfit: { type: 'suit', c1: 0x6b7280, tie: 0x0f766e }, pants: 0x6b7280, acc: ['badge'] },
+    talk: ['출근 3일차입니다!', '명함 아직 안 나왔어요', '선배님 이거 어떻게 해요?', '열심히 하겠습니다!!'],
+    hit: ['죄송합니다!! (?)', '제가 뭘 잘못했나요?!', '신고식인가요?!'] },
+  // ----- 공용 공간 -----
+  { name: '홍상무', model: 'kang', variant: { sat: 0.3, light: -0.15, w: 1.18 }, zone: 'meet', role: 'manager', voice: 0.7, speed: 2.2,
+    look: { h: 1.0, build: 'heavy', skin: SKIN[1], hair: ['slick', 0xd4d4d8], glasses: 0xd4a017, outfit: { type: 'suit', c1: 0x18181b, tie: 0x6d28d9 }, pants: 0x18181b, shoes: 0x0a0a0a },
+    talk: ['이번 분기 매출이 말이야...', '회의는 짧게 하자고 (2시간째)', '자네 이름이 뭐였더라?', '우리 회사는 가족 같은 회사야'],
+    hit: ['나 상무야!!', '이, 이게 무슨 짓인가!', '대표님께 보고하겠어!'],
+    nag: ['자네 부서가 어디야!', '이름 대!', '감히 상무를!', '연봉 협상 기대하게!'] },
+  { name: '경비 아저씨', zone: 'lobby', role: 'guard', voice: 0.78, model: 'guard', post: [-12.3, -9.5],
+    look: { h: 1.0, skin: SKIN[2], hair: ['short', 0x52525b], facial: ['mustache', 0x3f3f46], outfit: { type: 'uniform', c1: 0x1e3a8a }, pants: 0x1e293b, acc: ['cap'] },
+    talk: ['출입증 꼭 태그하세요', '오늘도 수고 많으십니다', '요즘 3층이 시끄럽던데...'],
+    hit: ['어허!', '업무방해요!', '이 양반이!'],
+    nag: ['거기 서!', '진정하세요!', '삐익-! 멈추세요!'] },
+  { name: '청소 여사님', zone: 'pantry', role: 'cleaner', voice: 1.3, model: 'cleaner', zones: ['pantry', 'hall'],
+    look: { h: 0.92, female: true, build: 'heavy', skin: SKIN[1], hair: ['perm', 0x7c2d12], outfit: { type: 'apron', c1: 0xfbcfe8, c2: 0x0ea5e9 }, pants: 0x475569, shoes: 0xf5f5f5, gloves: true, hold: 'mop' },
+    talk: ['바닥 미끄러우니 조심해~', '아휴 또 누가 컵 안 씻었어', '밥은 먹고 다녀?', '탕비실 과자 누가 다 먹었대'],
+    hit: ['어딜!', '어디서 손을!', '청소하는데 방해야!', '이놈이!'] },
+  { name: '문대리', model: 'mun', zone: 'pantry', role: 'staff', voice: 1.4,
+    look: { h: 0.95, female: true, skin: SKIN[0], hair: ['short', 0x292524], outfit: { type: 'shirt', c1: 0xc4b5fd }, pants: 0x1f2937, hold: 'mug' },
+    talk: ['커피 한 잔 하실래요?', '퇴근까지 4시간 32분...', '여기가 회사에서 제일 좋아요', '오늘 점심 메뉴 별로래요'],
+    hit: ['앗 뜨거!', '커피 쏟았잖아요!', '제 휴식 시간을!'] },
+  // ----- 생산동 (클린룸) -----
+  { name: '안반장', model: 'worker', variant: { hue: 200, sat: 1.3 }, zone: 'prod', role: 'manager', voice: 0.7,
+    look: { h: 1.03, build: 'heavy', skin: SKIN[2], hair: ['short', 0x1c1917], outfit: { type: 'labcoat', c2: 0xffffff }, pants: 0xe5e7eb },
+    talk: ['라인 멈추면 시간당 3천만 원이야!', '방진복 제대로 입어!', '타정기 펀치 또 깨졌어?', '오늘 목표 30만 정!'],
+    hit: ['라인 멈춰!!', '여기 클린룸이야!', '파티클 다 날리잖아!'],
+    nag: ['손 씻고 들어왔어?!', '배치 기록서는?!', '거기 서! 방진복 벗겨진다!', '생산 일정 밀리면 네 책임이야!'] },
+  { name: '탁사원', model: 'worker', variant: { hue: 120 }, zone: 'prod', role: 'staff', voice: 1.15,
+    look: { h: 0.99, skin: SKIN[1], hair: ['short', 0x1c1917], outfit: { type: 'labcoat', c2: 0xffffff }, pants: 0xe5e7eb },
+    talk: ['방진복 입으면 너무 더워요', '3교대 힘들어요...', '포장 라인 또 걸렸어요', '정제 하나 떨어뜨리면 다 폐기래요'],
+    hit: ['으앗!', '클린룸에서 뛰지 마세요!', '파티클 수치 올라가요!'] },
+  { name: '여주임', model: 'han', variant: { hue: 40, light: 0.05 }, zone: 'prod', role: 'staff', voice: 1.5,
+    look: { h: 0.95, female: true, skin: SKIN[0], hair: ['ponytail', 0x1c1917], outfit: { type: 'labcoat', c2: 0xffffff }, pants: 0xe5e7eb },
+    talk: ['밸리데이션 3배치째예요', '공정 검사 나가볼게요', '타정 압력 기록했어요?', '수율이 왜 이러지...'],
+    hit: ['꺄악!', '이거 일탈이에요!', '배치 망했어요!'] },
+  // ----- 분석센터 -----
+  { name: '변센터장', model: 'kim', variant: { hue: 120, sat: 1.2, w: 1.05 }, zone: 'anal', role: 'manager', voice: 0.66,
+    look: { h: 1.0, build: 'heavy', skin: SKIN[2], hair: ['balding', 0x52525b], outfit: { type: 'labcoat', c2: 0xffffff, tie: 0x166534 }, pants: 0x374151 },
+    talk: ['NMR 헬륨 충전비가 얼마인 줄 알아?', 'LC-MS 예약은 3주 뒤야', '이 장비 하나가 자네 연봉 30년치야', '분석 의뢰서 양식 틀렸어'],
+    hit: ['내 장비!!', '자네 장비값 물어낼 텐가!', '15억짜리야!'],
+    nag: ['장비 근처에서 뛰지 마!', '거기 서!', '분석 결과는 언제 낼 거야!', '자석 근처에 쇠붙이 금지야!'] },
+  { name: '노연구원', model: 'han', variant: { hue: 60, sat: 1.2 }, zone: 'anal', role: 'staff', voice: 1.6,
+    look: { h: 0.94, female: true, skin: SKIN[0], hair: ['ponytail', 0x3b2416], outfit: { type: 'labcoat', c2: 0xfde68a }, pants: 0x334155 },
+    talk: ['질량 스펙트럼 해석 중이에요', 'ICP 토치 켤 때 조심하세요', '이 피크가 뭔지 아무도 몰라요', 'KF 수분 0.5% 넘었어요'],
+    hit: ['꺅! 시료!', '이거 표준품이에요!', '데이터 날아갔어요!'] },
+  { name: '구주임', model: 'nam', variant: { hue: 140 }, zone: 'anal', role: 'staff', voice: 1.05,
+    look: { h: 1.01, skin: SKIN[1], hair: ['sidepart', 0x1b1b1b], outfit: { type: 'labcoat', c2: 0xe5e7eb, tie: 0x065f46 }, pants: 0x1f2937 },
+    talk: ['FT-IR 배경 측정 다시 해야 해요', '글러브박스 장갑 또 찢어졌어요', 'PCR 결과 나왔어요', '오븐 온도 확인했어요?'],
+    hit: ['으억!', '장비 교정 다시 해야 하잖아요!', '아 왜요!'] },
+  // ----- 휴게실 -----
+  { name: '피대리', model: 'mun', variant: { hue: 100, sat: 1.2 }, zone: 'lounge', role: 'staff', voice: 1.45,
+    look: { h: 0.96, female: true, skin: SKIN[0], hair: ['short', 0x292524], outfit: { type: 'shirt', c1: 0xbbf7d0 }, pants: 0x1f2937 },
+    talk: ['안마의자 대기 3명이에요', '탁구 한 판 하실래요?', '여기 숨어 있는 거 비밀이에요', '점심 먹고 졸려요...'],
+    hit: ['악! 쉬는 시간인데!', '안마 받다가 맞았어요!', '왜 여기까지 와요!'] },
+  { name: '함과장', model: 'kang', variant: { hue: 100, sat: 0.6, w: 1.12 }, zone: 'lounge', role: 'staff', voice: 0.82,
+    look: { h: 1.0, build: 'heavy', skin: SKIN[1], hair: ['short', 0x1c1917], outfit: { type: 'suit', c1: 0x4d5d3a, tie: 0x7c2d12 }, pants: 0x4d5d3a },
+    talk: ['오락기 최고 점수 내 거야', '외근 간다고 하고 왔어', '부장님한테는 비밀이다?', '탁구는 내가 사내 1등이지'],
+    hit: ['어이쿠!', '나 과장이야 임마!', '오락 점수 날아갔잖아!'] },
+  // ----- 전산실 -----
+  { name: '허주임', model: 'oh', variant: { hue: 200, sat: 1.3 }, zone: 'it', role: 'staff', voice: 1.0,
+    look: { h: 1.0, build: 'heavy', skin: SKIN[1], hair: ['curly', 0x111111], outfit: { type: 'hoodie', c1: 0x374151 }, pants: 0x1f2937 },
+    talk: ['껐다 켜 보셨어요?', '서버 건드리지 마세요 제발', 'ERP 또 느리대요', '비밀번호 90일마다 바꾸세요'],
+    hit: ['서버!! 서버 조심!!', '전산 다 날아가요!', '백업 안 했단 말이에요!'] },
+  { name: '방사원', model: 'lee', variant: { hue: 180, sat: 1.1 }, zone: 'it', role: 'staff', voice: 1.55,
+    look: { h: 0.95, female: true, skin: SKIN[0], hair: ['bob', 0x1c1917], outfit: { type: 'cardigan', c1: 0x93c5fd, c2: 0xffffff }, pants: 0x1f2937 },
+    talk: ['프린터 드라이버 깔아드릴게요', '랜선 뽑지 마세요!', '보안 교육 이수하셨어요?', '여긴 너무 추워요'],
+    hit: ['꺅!', '케이블 꼬였잖아요!', '서버실에서 뭐 하세요!'] },
+];
+const PLAYER_LOOK = (female) => ({
+  h: female ? 0.96 : 1.02, female, skin: SKIN[female ? 0 : 1], hair: female ? ['ponytail', 0x3b2416] : ['messy', 0x1b1b1b], topMat: playerShirt,
+  outfit: { type: 'shirt', c1: 0xffffff, tie: 0x1f2937, rolled: true }, pants: 0x2b2f3a, acc: ['badge'],
+});
+const playerShirt = new THREE.MeshToonMaterial({ color: tune.shirt, gradientMap: toonRamp });
+
+function makeChar(look, extra = {}) {
+  const h = makeHuman(look);
+  scene.add(h.g);
+  return Object.assign(h, {
+    pos: new THREE.Vector3(), vel: new THREE.Vector3(), facing: 0, faceTo: 0, state: 'wander', timer: 0,
+    walk: 0, punchT: 0, punchSide: 1, punchCD: 0, r: 0.38, bubble: null, bubbleT: 0, spin: 0, hits: 0,
+    idleT: rand(0, 2), talkT: 0, target: null, stuckT: 0, nagT: 0, chainCD: 0, counterCD: 0, lookT: 0, look: 0,
+  }, extra);
+}
+function spawnNPC(def) {
+  const c = makeChar(def.look, { def, name: def.name, role: def.role, home: zoneById(def.zone), punchT: -1, atkCD: 0, atkT: 0, combo: 0, fight: FIGHTERS.includes(def.name) });
+  if (def.model) {
+    try { attachModel(c, def.model, def.variant); }
+    catch (err) { console.warn(`${def.name} 3D 모델 실패, 도형 캐릭터 사용:`, err); c.body.visible = true; c.rig = null; }
+  }
+  if (def.post) { c.pos.set(def.post[0], 0, def.post[1]); c.state = 'post'; c.facing = c.faceTo = 0; }
+  else {
+    const p = randomPointIn(c.home);
+    c.pos.set(p.x, 0, p.z); c.facing = c.faceTo = rand(0, PI * 2);
+  }
+  npcs.push(c);
+}
+function randomPointIn(zn) {
+  for (let i = 0; i < 12; i++) {
+    const x = rand(zn.x0 + 1, zn.x1 - 1), z = rand(zn.z0 + 1, zn.z1 - 1);
+    if (navFree(x, z) && !insideAnyProp(x, z, 0.4)) return { x, z };
+  }
+  return { x: (zn.x0 + zn.x1) / 2, z: (zn.z0 + zn.z1) / 2 };
+}
+
+/* =====================================================================
+   11. 게임 상태 / 연출 (파편, 연기, 글자, 말풍선)
+   ===================================================================== */
+const state = { company: '', stress: 70, damage: 0, works: 0, warn: 0, quietT: 0, zeroShown: false, lastStars: 0, hp: 100, hurtT: 0, dead: false };
+// 맞으면 반격하는 사람들 (나머지는 도망가거나 잔소리만 함)
+const FIGHTERS = ['강차장', '조과장', '함과장', '안반장', '최인턴'];
+const work = { active: false, t: 0, prop: null, typeT: 0 };
+let running = false, T = 0, hitstop = 0, shakeAmt = 0, player = null;
+
+const frags = [], puffs = [], rockets = [];
+const MAX_FRAGS = MOBILE ? 260 : 420;
+const _v3 = new THREE.Vector3();
+function shatter(p, dx, dz) {
+  p.g.updateMatrixWorld(true);
+  for (const part of p.parts) {
+    const vol = part.s.x * part.s.y * part.s.z;
+    const n = clamp(Math.round(vol * 30), 1, 4);
+    const wp = p.g.localToWorld(_v3.copy(part.c));
+    for (let i = 0; i < n; i++) {
+      const sz = clamp(Math.cbrt(vol / n), 0.05, 0.32) * rand(0.6, 1.1);
+      const f = new THREE.Mesh(boxGeo, part.mat);
+      f.scale.set(sz * rand(0.6, 1.4), sz * rand(0.6, 1.4), sz * rand(0.6, 1.4));
+      f.position.set(wp.x + rand(-part.s.x, part.s.x) * 0.4, wp.y + rand(-0.05, 0.05), wp.z + rand(-part.s.z, part.s.z) * 0.4);
+      f.castShadow = !MOBILE && sz > 0.15;
+      scene.add(f);
+      const sp = rand(2, 6) * tune.punch;
+      frags.push({ m: f, vx: dx * sp + rand(-2.5, 2.5), vy: rand(3, 7), vz: dz * sp + rand(-2.5, 2.5), ax: rand(-10, 10), az: rand(-10, 10), life: rand(7, 10), h: f.scale.y / 2 });
+    }
+  }
+  while (frags.length > MAX_FRAGS) scene.remove(frags.shift().m);
+}
+function updateFrags(dt) {
+  for (let i = frags.length - 1; i >= 0; i--) {
+    const f = frags[i];
+    f.vy -= 22 * dt;
+    f.m.position.x += f.vx * dt; f.m.position.y += f.vy * dt; f.m.position.z += f.vz * dt;
+    f.m.rotation.x += f.ax * dt; f.m.rotation.z += f.az * dt;
+    if (f.m.position.y < f.h) {
+      f.m.position.y = f.h; f.vy *= -0.35;
+      const k = Math.exp(-6 * dt); f.vx *= k; f.vz *= k; f.ax *= k; f.az *= k;
+    }
+    f.m.position.x = clamp(f.m.position.x, -MAP_X + 0.2, MAP_X - 0.2); f.m.position.z = clamp(f.m.position.z, -13.8, 13.8);
+    f.life -= dt;
+    if (f.life < 1) f.m.scale.multiplyScalar(Math.max(0.0001, 1 - dt * 3));
+    if (f.life <= 0) { scene.remove(f.m); frags.splice(i, 1); }
+  }
+}
+const puffGeo = new THREE.SphereGeometry(0.5, 10, 8);
+function puff(x, y, z, color = 0xdddddd, size = 0.4, vx = 0, vy = 0.6, vz = 0, life = 1.2) {
+  const m = new THREE.Mesh(puffGeo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.7, depthWrite: false }));
+  m.position.set(x, y, z); m.scale.setScalar(size); scene.add(m);
+  puffs.push({ m, vx, vy, vz, life, max: life, size });
+  if (puffs.length > 140) { const o = puffs.shift(); scene.remove(o.m); o.m.material.dispose(); }
+}
+function updatePuffs(dt) {
+  for (let i = puffs.length - 1; i >= 0; i--) {
+    const p = puffs[i]; p.life -= dt;
+    const k = Math.exp(-2 * dt); p.vx *= k; p.vz *= k;
+    p.m.position.x += p.vx * dt; p.m.position.y += p.vy * dt; p.m.position.z += p.vz * dt;
+    const t = 1 - p.life / p.max;
+    p.m.scale.setScalar(p.size * (1 + t * 2));
+    p.m.material.opacity = 0.7 * (1 - t);
+    if (p.life <= 0) { scene.remove(p.m); p.m.material.dispose(); puffs.splice(i, 1); }
+  }
+}
+
+const bubbleLayer = $('#bubbles');
+const _v = new THREE.Vector3();
+function toScreen(x, y, z) {
+  _v.set(x, y, z).project(camera);
+  return { x: (_v.x + 1) / 2 * innerWidth, y: (1 - _v.y) / 2 * innerHeight, ok: _v.z < 1 };
+}
+const floats = [];
+function floatText(x, y, z, text, color = '#fff', size = 20) {
+  const el = document.createElement('div');
+  el.className = 'float'; el.textContent = text; el.style.color = color; el.style.fontSize = Math.round(size * 1.2) + 'px';
+  bubbleLayer.appendChild(el);
+  floats.push({ el, x: x + rand(-0.3, 0.3), y, z, t: 0 });
+}
+function updateFloats(dt) {
+  for (let i = floats.length - 1; i >= 0; i--) {
+    const f = floats[i]; f.t += dt;
+    const s = toScreen(f.x, f.y + f.t * 1.2, f.z);
+    f.el.style.transform = `translate(${s.x}px, ${s.y}px) translate(-50%, -50%) scale(${f.t < 0.1 ? 1 + (0.1 - f.t) * 6 : 1})`;
+    f.el.style.opacity = String(clamp(1.5 - f.t, 0, 1));
+    if (f.t > 1.5) { f.el.remove(); floats.splice(i, 1); }
+  }
+}
+function say(c, text, dur = 2.4) {
+  if (!c.bubble) {
+    const el = document.createElement('div'); el.className = 'bubble';
+    const b = document.createElement('b'), sp = document.createElement('span');
+    el.append(b, sp); bubbleLayer.appendChild(el);
+    c.bubble = el; c.bubbleName = b; c.bubbleText = sp;
+  }
+  c.bubbleName.textContent = c.name || '';
+  c.bubbleText.textContent = text; c.bubbleT = dur; c.bubble.style.display = 'block';
+}
+function updateBubble(c, dt) {
+  if (!c.bubble) return;
+  c.bubbleT -= dt;
+  if (c.bubbleT <= 0) { c.bubble.style.display = 'none'; return; }
+  const s = toScreen(c.pos.x, c.pos.y + 2.05 * c.s, c.pos.z);
+  c.bubble.style.display = s.ok ? 'block' : 'none';
+  c.bubble.style.transform = `translate(${s.x}px, ${s.y}px) translate(-50%, -100%)`;
+}
+let bannerTimer = 0;
+function banner(text, ms = 2200) {
+  const b = $('#banner'); b.textContent = text; b.classList.add('show');
+  clearTimeout(bannerTimer); bannerTimer = setTimeout(() => b.classList.remove('show'), ms);
+}
+let wastedTimer = 0;
+function showWasted(title, sub, busted) {
+  const w = $('#wasted');
+  w.querySelector('h2').textContent = title; w.querySelector('p').textContent = sub;
+  w.classList.toggle('busted', !!busted); w.classList.add('show');
+  renderer.domElement.style.filter = 'grayscale(1) contrast(1.1)';
+  clearTimeout(wastedTimer);
+  wastedTimer = setTimeout(() => { w.classList.remove('show'); renderer.domElement.style.filter = ''; }, 2200);
+}
+
+/* =====================================================================
+   12. 입력
+   ===================================================================== */
+const keys = {};
+addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  keys[e.code] = true;
+  if (!running) return;
+  if (e.code === 'Space' || e.code === 'KeyJ') { doPunch(); e.preventDefault(); }
+  if (e.code === 'KeyE' || e.code === 'KeyK') doInteract();
+});
+addEventListener('keyup', e => { keys[e.code] = false; });
+addEventListener('contextmenu', e => e.preventDefault());
+
+const stick = { id: null, ox: 0, oy: 0, x: 0, y: 0 };
+const stickEl = $('#stick'), knobEl = $('#knob'), canvas = renderer.domElement;
+canvas.addEventListener('pointerdown', e => {
+  if (!running) return;
+  if (e.clientX > innerWidth * 0.55) { doPunch(); return; }
+  if (stick.id !== null) return;
+  stick.id = e.pointerId; stick.ox = e.clientX; stick.oy = e.clientY; stick.x = stick.y = 0;
+  stickEl.style.left = e.clientX + 'px'; stickEl.style.top = e.clientY + 'px'; stickEl.style.display = 'block';
+  knobEl.style.transform = '';
+  try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+});
+canvas.addEventListener('pointermove', e => {
+  if (e.pointerId !== stick.id) return;
+  let dx = e.clientX - stick.ox, dy = e.clientY - stick.oy;
+  const Rr = 55, d = Math.hypot(dx, dy);
+  if (d > Rr) { dx *= Rr / d; dy *= Rr / d; }
+  stick.x = dx / Rr; stick.y = dy / Rr;
+  knobEl.style.transform = `translate(${dx}px, ${dy}px)`;
+});
+function endStick(e) { if (e.pointerId !== stick.id) return; stick.id = null; stick.x = stick.y = 0; stickEl.style.display = 'none'; }
+canvas.addEventListener('pointerup', endStick);
+canvas.addEventListener('pointercancel', endStick);
+
+let punchHeld = false;
+const btnPunch = $('#btnPunch');
+btnPunch.addEventListener('pointerdown', e => { e.preventDefault(); punchHeld = true; btnPunch.classList.add('on'); doPunch(); });
+for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) btnPunch.addEventListener(ev, () => { punchHeld = false; btnPunch.classList.remove('on'); });
+$('#btnTalk').addEventListener('pointerdown', e => { e.preventDefault(); doInteract(); });
+$('#btnRespawn').addEventListener('click', () => { sfx('click'); respawn(); });
+$('#btnRestart').addEventListener('click', () => location.reload());
+
+function getInput() {
+  let x = stick.x, z = stick.y;
+  if (keys.KeyA || keys.ArrowLeft) x -= 1;
+  if (keys.KeyD || keys.ArrowRight) x += 1;
+  if (keys.KeyW || keys.ArrowUp) z -= 1;
+  if (keys.KeyS || keys.ArrowDown) z += 1;
+  const m = Math.hypot(x, z);
+  if (m > 1) { x /= m; z /= m; }
+  return { x, z, m: Math.min(m, 1) };
+}
+
+/* =====================================================================
+   13. 액션: 펀치 / 넉백 / 파괴 / 상호작용
+   ===================================================================== */
+const standing = c => c.state !== 'knocked' && c.state !== 'getup';
+function doPunch() {
+  if (!running || !standing(player) || player.punchCD > 0) return;
+  player.punchCD = 0.28; player.punchT = 0.16; player.punchSide *= -1; player.punchNew = true;
+  cancelWork();
+  const px = player.pos.x, pz = player.pos.z;
+  let fx = Math.sin(player.facing), fz = Math.cos(player.facing);
+  // 자동 조준: 앞쪽 대상 우선
+  let best = null, bestScore = Infinity;
+  const consider = (tx, tz, d, range) => {
+    if (d > range) return;
+    const dot = d > 0.01 ? ((tx - px) * fx + (tz - pz) * fz) / d : 1;
+    const score = d * (1.8 - dot);
+    if (score < bestScore) { bestScore = score; best = { tx, tz }; }
+  };
+  for (const n of npcs) if (standing(n)) consider(n.pos.x, n.pos.z, Math.hypot(n.pos.x - px, n.pos.z - pz), 2.4);
+  for (const p of props) if (p.alive) { const r = distToBox(player.pos, propBox(p)); consider(r.cx, r.cz, r.d, 1.5); }
+  if (best && Math.hypot(best.tx - px, best.tz - pz) > 0.01) {
+    player.facing = player.faceTo = Math.atan2(best.tx - px, best.tz - pz);
+    fx = Math.sin(player.facing); fz = Math.cos(player.facing);
+  }
+  let hit = false;
+  for (const n of npcs) {
+    if (!standing(n)) continue;
+    const dx = n.pos.x - px, dz = n.pos.z - pz, d = Math.hypot(dx, dz);
+    if (d < 1.7 && (d < 0.3 || (dx * fx + dz * fz) / d > 0.35)) { hitNPC(n, fx, fz); hit = true; }
+  }
+  for (const p of props) {
+    if (!p.alive) continue;
+    const r = distToBox(player.pos, propBox(p));
+    if (r.d < 1.3 && (r.d < 0.25 || ((r.cx - px) * fx + (r.cz - pz) * fz) / r.d > 0.25)) { damageProp(p, fx, fz, tune.punch, false); hit = true; }
+  }
+  if (hit) { hitstop = 0.06; shakeAmt = Math.max(shakeAmt, 0.25 * tune.shake); sfx('punch'); }
+  else sfx('whoosh');
+}
+function hitNPC(n, dx, dz, power = tune.punch) {
+  if (n.role === 'cleaner') { // 여사님은 날아가지 않는다
+    if (n.counterCD > 0) return;
+    n.counterCD = 1.2; n.state = 'angry'; n.timer = 2; setFace(n, 'yell');
+    n.faceTo = Math.atan2(-dx, -dz);
+    say(n, pick(n.def.hit)); sfx('clang'); grunt(n.def.voice, 0.3);
+    n.armR.rotation.x = -2.6;
+    if (cheat.god) return;
+    setTimeout(() => hurtPlayer(35, -dx, -dz, 1.3), 150);
+    addStress(3);
+    setTimeout(() => { if (!state.dead) banner('🧹 여사님께 혼났습니다 (체력 -35)', 2000); }, 300);
+    return;
+  }
+  knockNPC(n, dx, dz, power);
+}
+function knockNPC(n, dx, dz, power, chain = false) {
+  const fly = power * tune.fly;
+  n.state = 'knocked'; n.timer = 1.5 + power * 0.3;
+  n.vel.set(dx * 6.5 * fly, 3.5 + 1.5 * fly, dz * 6.5 * fly);
+  n.facing = n.faceTo = Math.atan2(-dx, -dz);
+  n.spin = rand(-6, 6); n.hits++; n.chainCD = 0.3;
+  n.stars.visible = true; setFace(n, 'ko');
+  say(n, pick(n.def.hit));
+  sfx('grunt', n.def.voice); sfx('boing');
+  const big = n.role === 'manager' || n.role === 'guard';
+  addStress(big ? -7 : -4);
+  if (n.role === 'guard') addWarn(Math.max(0.9, 3 - state.warn)); // 경비를 때리면 즉시 3단계
+  else addWarn(big ? 0.6 : 0.35);
+  floatText(n.pos.x, 2.2, n.pos.z, chain ? '연쇄!' : pick(['퍽!', '빡!', '쾅!', '뻑!']), chain ? '#ff9f43' : '#ffd166', chain ? 24 : 22);
+}
+// 플레이어가 맞음: 체력 깎고, power가 있으면 넘어짐
+function hurtPlayer(dmg, dx, dz, power = 0) {
+  if (cheat.god || state.dead) return;
+  state.hp = Math.max(0, state.hp - dmg); state.hurtT = 0;
+  floatText(player.pos.x, 2.3, player.pos.z, '-' + dmg, '#ef4444', 22);
+  const fx = $('#hurtFx'); fx.style.opacity = 1; setTimeout(() => { fx.style.opacity = 0; }, 180);
+  if (state.hp <= 0) { die(dx, dz); return; }
+  if (power > 0) knockPlayer(dx, dz, power);
+  else { sfx('punch'); grunt(0.95, 0.25); shakeAmt = Math.max(shakeAmt, 0.3 * tune.shake); hitstop = 0.05; }
+}
+function die(dx, dz) {
+  state.dead = true;
+  knockPlayer(dx, dz, 1.4);
+  player.state = 'knocked'; player.timer = Infinity; // 부활 버튼을 누를 때까지 누워 있음
+  say(player, pick(['퇴사할 걸...', '산재 처리 되나요...', '으윽...']), 2);
+  for (const n of npcs) if (n.state === 'brawl' || n.state === 'chase') { n.state = 'wander'; n.target = null; setFace(n, 'normal'); }
+  setTimeout(() => {
+    renderer.domElement.style.filter = 'grayscale(1) contrast(1.1)';
+    $('#dead').classList.add('show');
+  }, 900);
+}
+function respawn() {
+  const [sx, sz, sf] = SPAWNS[selectedDept] || SPAWNS.qc;
+  state.dead = false; state.hp = 100; state.warn = 0; state.lastStars = 0;
+  player.state = 'normal'; player.timer = 0; player.vel.set(0, 0, 0);
+  player.pos.set(sx, 0, sz); player.facing = player.faceTo = sf;
+  player.body.rotation.x = 0; player.body.position.y = 0; player.stars.visible = false; setFace(player, 'normal');
+  for (const n of npcs) {
+    if (n.role === 'guard' && n.state === 'pursue') n.state = 'return';
+    if (n.state === 'brawl' || n.state === 'chase') { n.state = 'wander'; n.target = null; }
+  }
+  renderer.domElement.style.filter = '';
+  $('#dead').classList.remove('show');
+  banner('다시 출근했습니다... 오늘도 화이팅?', 2200);
+}
+function knockPlayer(dx, dz, power) {
+  if (!standing(player)) return;
+  cancelWork();
+  player.state = 'knocked'; player.timer = 1.1;
+  player.vel.set(dx * 6 * power, 3.5 + power, dz * 6 * power);
+  player.facing = player.faceTo = Math.atan2(-dx, -dz);
+  player.spin = rand(-5, 5); player.stars.visible = true; setFace(player, 'ko');
+  sfx('punch'); grunt(0.95, 0.35); shakeAmt = Math.max(shakeAmt, 0.5 * tune.shake);
+}
+function damageProp(p, dx, dz, power, byBody) {
+  if (p.def.fixed) {
+    if (!byBody) { floatText(p.x, 1.6, p.z, '🚧 준비중인 부서예요', '#facc15', 15); sfx('thud'); }
+    return;
+  }
+  p.hp -= cheat.onePunch && !byBody ? Infinity : power;
+  if (p.hp <= 0) breakProp(p, dx, dz);
+  else {
+    const k = (byBody ? 1.5 : 2.6) * power / p.def.mass;
+    p.vx += dx * k; p.vz += dz * k; p.wobble = 1;
+    addStress(-0.8);
+    if (!byBody) floatText(p.x, 1.2, p.z, '쾅', '#e2e8f0', 16);
+    sfx(p.def.snd === 'metal' || p.def.snd === 'electronic' ? 'clang' : p.def.snd === 'glass' ? 'tink' : 'thud');
+  }
+}
+function breakProp(p, dx, dz) {
+  p.alive = false;
+  scene.remove(p.g);
+  if (work.prop === p) cancelWork();
+  const v = p.def.value;
+  state.damage += v;
+  if (p.def.special === 'rocket') launchRocket(p, dx, dz);
+  else shatter(p, dx, dz);
+  if (p.def.special === 'powder') {
+    for (let i = 0; i < 24; i++) puff(p.x, 0.5, p.z, 0xf5f5f5, rand(0.3, 0.6), rand(-3, 3), rand(0.2, 1.2), rand(-3, 3), rand(1.5, 2.5));
+    sfx('psst');
+    for (const n of npcs) if (standing(n) && Math.hypot(n.pos.x - p.x, n.pos.z - p.z) < 3) { say(n, '콜록콜록!!', 1.5); setFace(n, 'scared'); }
+  }
+  floatText(p.x, 1.6, p.z, '-' + fmtWon(v), '#ff6b6b', v >= 1e7 ? 26 : 19);
+  if (p.def.breakText) floatText(p.x, 2.2, p.z, p.def.breakText, '#4ade80', 20);
+  if (v >= 1e8) { banner(`💥 ${p.def.name} 파괴! (${fmtWon(v)})`); sfx('boom'); }
+  addStress(-(2 + Math.min(p.def.hp, 6) * 1.2));
+  addWarn(0.25 + (v >= 1e7 ? 0.8 : 0));
+  shakeAmt = Math.max(shakeAmt, 0.4 * tune.shake);
+  sfx(p.def.snd);
+}
+function launchRocket(p, dx, dz) {
+  const g = new THREE.Group(), inner = new THREE.Group();
+  const c = p.opt?.color ?? 0x9ca3af;
+  inner.add(cyl(0.12, 0.12, 1.1, c, 0, 0, 0, { r: 0.4, m: 0.3 })); inner.add(sph(0.12, c, 0, 0.55, 0, { r: 0.4, m: 0.3 }));
+  inner.add(cyl(0.05, 0.05, 0.12, 0x777777, 0, 0.66, 0, METAL));
+  inner.rotation.x = H; g.add(inner);
+  g.position.set(p.x, 0.5, p.z); scene.add(g);
+  rockets.push({ g, pos: { x: p.x, z: p.z }, vx: dx * 13, vz: dz * 13, life: 2.4, arm: 0.35 });
+  sfx('hiss');
+  floatText(p.x, 1.6, p.z, '치이이익!!', '#e5e7eb', 22);
+}
+function updateRockets(dt) {
+  for (let i = rockets.length - 1; i >= 0; i--) {
+    const r = rockets[i];
+    r.life -= dt; r.arm -= dt;
+    r.pos.x += r.vx * dt; r.pos.z += r.vz * dt;
+    const v = { x: r.vx, z: r.vz };
+    for (const w of walls) { const n = pushOutCircle(r.pos, 0.25, w); if (n) bounce(v, n, 0.85); }
+    for (const p of props) {
+      if (!p.alive) continue;
+      const n = pushOutCircle(r.pos, 0.25, propBox(p));
+      if (n) { bounce(v, n, 0.7); if (p.hitCD <= 0) { p.hitCD = 0.25; damageProp(p, -n.nx, -n.nz, 2, true); } }
+    }
+    r.vx = v.x; r.vz = v.z;
+    const sp = Math.hypot(r.vx, r.vz) || 1;
+    for (const n of npcs) if (standing(n) && n.role !== 'cleaner' && Math.hypot(n.pos.x - r.pos.x, n.pos.z - r.pos.z) < 0.7) knockNPC(n, r.vx / sp, r.vz / sp, 1.4, true);
+    if (r.arm <= 0 && standing(player) && Math.hypot(player.pos.x - r.pos.x, player.pos.z - r.pos.z) < 0.6) hurtPlayer(20, r.vx / sp, r.vz / sp, 1.2);
+    r.g.position.set(r.pos.x, 0.5 + Math.sin(T * 30) * 0.05, r.pos.z);
+    r.g.rotation.y = Math.atan2(r.vx, r.vz) + PI;
+    if (Math.random() < 0.8) puff(r.pos.x - r.vx / sp * 0.6, 0.5, r.pos.z - r.vz / sp * 0.6, 0xe5e7eb, 0.18, rand(-0.5, 0.5), rand(0.2, 0.8), rand(-0.5, 0.5), 0.8);
+    if (r.life <= 0) { explode(r.pos.x, r.pos.z); scene.remove(r.g); rockets.splice(i, 1); }
+  }
+}
+function explode(x, z) {
+  sfx('boom'); shakeAmt = Math.max(shakeAmt, 0.9 * tune.shake); hitstop = 0.08;
+  floatText(x, 2, z, '펑!!!', '#ff7a00', 34);
+  for (let i = 0; i < 26; i++) puff(x, rand(0.3, 1.2), z, pick([0xff7a00, 0xffc04d, 0x6b7280, 0x9ca3af]), rand(0.3, 0.7), rand(-4, 4), rand(0.5, 2.5), rand(-4, 4), rand(0.8, 1.6));
+  for (const n of npcs) {
+    const dx = n.pos.x - x, dz = n.pos.z - z, d = Math.hypot(dx, dz);
+    if (d < 3.2 && standing(n) && n.role !== 'cleaner') knockNPC(n, dx / (d || 1), dz / (d || 1), 1.6, true);
+  }
+  for (const p of props) if (p.alive && !p.def.fixed && distToBox({ x, z }, propBox(p)).d < 2.5) { const dx = p.x - x, dz = p.z - z, d = Math.hypot(dx, dz) || 1; damageProp(p, dx / d, dz / d, 2, true); }
+  const pd = Math.hypot(player.pos.x - x, player.pos.z - z);
+  if (pd < 2.5) hurtPlayer(30, (player.pos.x - x) / (pd || 1), (player.pos.z - z) / (pd || 1), 1.3);
+}
+
+function addStress(v) {
+  state.stress = clamp(state.stress + v, 0, 100);
+  if (state.stress <= 0 && !state.zeroShown) { state.zeroShown = true; banner('🧘 스트레스 제로! 오늘은 칼퇴다!', 3000); }
+  if (state.stress > 30) state.zeroShown = false;
+}
+function addWarn(v) {
+  if (cheat.noWanted) return;
+  state.warn = clamp(state.warn + v, 0, 5); state.quietT = 0;
+  const s = Math.floor(state.warn);
+  if (s > state.lastStars) {
+    sfx('siren');
+    const el = $('#stars'); el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+    if (s === 3) banner('🚨 인사팀 경고 3단계! 경비 아저씨가 출동합니다', 2600);
+  }
+  state.lastStars = s;
+}
+
+function doInteract() {
+  if (!running || work.active || !standing(player)) return;
+  let nn = null, nd = 2.0;
+  for (const n of npcs) {
+    if (!['wander', 'chase', 'post'].includes(n.state)) continue;
+    const d = Math.hypot(n.pos.x - player.pos.x, n.pos.z - player.pos.z);
+    if (d < nd) { nn = n; nd = d; }
+  }
+  if (nn) {
+    nn.faceTo = Math.atan2(player.pos.x - nn.pos.x, player.pos.z - nn.pos.z);
+    player.faceTo = Math.atan2(nn.pos.x - player.pos.x, nn.pos.z - player.pos.z);
+    nn.talkT = 2.6;
+    const line = (nn.role === 'manager' && state.warn >= 2) ? '자네 요즘 무슨 일 있나...?' : pick(nn.def.talk);
+    say(nn, line, 2.6); grunt(nn.def.voice, 0.08, 0, sfxBus, 0.2);
+    return;
+  }
+  let wp = null, wd = 1.6;
+  for (const p of props) {
+    if (!p.alive || !p.def.work) continue;
+    const r = distToBox(player.pos, propBox(p));
+    if (r.d < wd) { wp = p; wd = r.d; }
+  }
+  if (wp) {
+    work.active = true; work.t = 0; work.prop = wp;
+    player.faceTo = Math.atan2(wp.x - player.pos.x, wp.z - player.pos.z);
+    $('#workLbl').textContent = wp.def.work.label + '...';
+    $('#workbar').style.display = 'block';
+    return;
+  }
+  floatText(player.pos.x, 2.2, player.pos.z, '주변에 아무도 없어요', '#9aa4b8', 14);
+}
+function cancelWork() {
+  if (!work.active) return;
+  work.active = false; work.prop = null; $('#workbar').style.display = 'none';
+}
+
+/* =====================================================================
+   14. 업데이트 루프
+   ===================================================================== */
+function animateHuman(c, dt, speed) {
+  if (speed > 0.1) {
+    const before = Math.sin(c.walk);
+    c.walk += dt * speed * 3.4;
+    if (c === player && Math.sign(before) !== Math.sign(Math.sin(c.walk))) sfx('step');
+  } else c.walk = lerp(c.walk, Math.round(c.walk / PI) * PI, 0.2);
+  const amp = Math.min(1, speed / 2.5);
+  const sw = Math.sin(c.walk) * 0.65 * amp;
+  c.legL.rotation.x = sw; c.legR.rotation.x = -sw;
+  const holdR = c.def && ['mug', 'tumbler', 'flask', 'phone'].includes(c.def.look.hold) ? -0.6 : 0;
+  const holdL = c.def && c.def.look.hold === 'clipboard' ? -0.7 : 0;
+  c.armL.rotation.x = holdL || -sw * 0.8; c.armR.rotation.x = holdR || sw * 0.8;
+  c.armL.rotation.z = -0.06; c.armR.rotation.z = 0.06;
+  if (c.punchT > 0) (c.punchSide > 0 ? c.armR : c.armL).rotation.x = -H;
+  if (standing(c)) c.body.position.y = Math.abs(Math.cos(c.walk)) * 0.025 * amp;
+  // 두리번거리기
+  c.lookT -= dt;
+  if (c.lookT <= 0) { c.lookT = rand(1.5, 4); c.look = speed > 0.1 ? 0 : rand(-0.6, 0.6); }
+  c.head.rotation.y = lerp(c.head.rotation.y, c.look, 1 - Math.exp(-4 * dt));
+  // 말할 때 입 움직임
+  if (c.F.mouth.visible) c.F.mouth.scale.y = c.bubbleT > 0 && Math.sin(T * 28) > 0 ? 0.035 : 0.011;
+  c.g.position.copy(c.pos);
+  c.g.rotation.y = c.facing;
+  if (c.rig) updateRig(c, dt, speed);
+}
+function updateKnocked(c, dt) {
+  c.vel.y -= 22 * dt;
+  c.pos.addScaledVector(c.vel, dt);
+  const grounded = c.pos.y <= 0;
+  if (grounded) {
+    c.pos.y = 0;
+    c.vel.y = c.vel.y < -4 ? -c.vel.y * 0.3 : 0;
+    const k = Math.exp(-4 * dt); c.vel.x *= k; c.vel.z *= k;
+  } else c.facing += c.spin * dt;
+  c.faceTo = c.facing;
+  c.body.rotation.x = lerp(c.body.rotation.x, -H, 1 - Math.exp(-14 * dt));
+  c.body.position.y = lerp(c.body.position.y, 0.17 * c.s, 1 - Math.exp(-14 * dt));
+  resolveChar(c, true);
+  c.stars.rotation.y += dt * 6;
+  c.timer -= dt;
+  return grounded;
+}
+function updateGetup(c, dt) {
+  c.body.rotation.x = lerp(c.body.rotation.x, 0, 1 - Math.exp(-12 * dt));
+  c.body.position.y = lerp(c.body.position.y, 0, 1 - Math.exp(-12 * dt));
+  c.timer -= dt;
+  if (c.timer > 0) return false;
+  c.body.rotation.x = 0; c.body.position.y = 0; c.pos.y = 0;
+  return true;
+}
+
+function updatePlayer(dt) {
+  player.punchCD -= dt; player.punchT -= dt;
+  let sp = 0;
+  if (player.state === 'knocked') {
+    if (updateKnocked(player, dt) && player.timer <= 0) { player.state = 'getup'; player.timer = 0.45; player.stars.visible = false; }
+  } else if (player.state === 'getup') {
+    if (updateGetup(player, dt)) player.state = 'normal';
+  } else {
+    const inp = getInput();
+    if (punchHeld && player.punchCD <= 0) doPunch();
+    if (inp.m > 0.1 && player.punchT < -0.18) { // 주먹 지르는 동안은 제자리 (미끄러짐 방지)
+      cancelWork();
+      sp = tune.speed * inp.m;
+      player.pos.x += inp.x * sp * dt; player.pos.z += inp.z * sp * dt;
+      player.faceTo = Math.atan2(inp.x, inp.z);
+    }
+    player.facing = angLerp(player.facing, player.faceTo, 1 - Math.exp(-18 * dt));
+    resolveChar(player, false);
+    setFace(player, player.punchT > 0 || state.stress > 75 ? 'angry' : 'normal');
+  }
+  animateHuman(player, dt, sp);
+
+  if (work.active) {
+    work.t += dt / work.prop.def.work.dur;
+    work.typeT -= dt;
+    if (work.typeT <= 0) { work.typeT = rand(0.06, 0.14); sfx('type'); }
+    $('#workFill').style.width = (work.t * 100) + '%';
+    const s = toScreen(player.pos.x, 2.5, player.pos.z);
+    $('#workbar').style.transform = `translate(${s.x - 75}px, ${s.y}px)`;
+    player.armL.rotation.x = player.armR.rotation.x = -0.9 + Math.sin(T * 25) * 0.15;
+    if (work.t >= 1) {
+      const wdef = work.prop.def.work;
+      cancelWork();
+      state.works++;
+      addStress(wdef.stress);
+      if (wdef.stress < 0) state.hp = Math.min(100, state.hp - wdef.stress * 2); // 휴식하면 체력도 회복
+      floatText(player.pos.x, 2.4, player.pos.z, `${pick(wdef.msg)} (스트레스 ${wdef.stress > 0 ? '+' : ''}${wdef.stress})`, wdef.stress > 0 ? '#fca5a5' : '#4ade80', 15);
+      sfx(wdef.sound || 'done');
+    }
+  }
+}
+
+function moveToward(c, tx, tz, speed, dt, nav = false) {
+  const t = nav ? navNext(c, tx, tz) : { x: tx, z: tz };
+  const dx = t.x - c.pos.x, dz = t.z - c.pos.z, d = Math.hypot(dx, dz);
+  if (d < 0.05) return 0;
+  const step = Math.min(d, speed * dt);
+  c.pos.x += dx / d * step; c.pos.z += dz / d * step;
+  c.faceTo = Math.atan2(dx, dz);
+  return speed;
+}
+
+function updateNPC(n, dt) {
+  n.chainCD -= dt; n.counterCD -= dt; n.punchT -= dt;
+  let sp = 0;
+  const bx = n.pos.x, bz = n.pos.z;
+  const toPlayer = Math.hypot(player.pos.x - n.pos.x, player.pos.z - n.pos.z);
+
+  if (n.state === 'knocked') {
+    const grounded = updateKnocked(n, dt);
+    const speed = Math.hypot(n.vel.x, n.vel.z);
+    if (speed > 4) {
+      for (const o of npcs) {
+        if (o === n || !standing(o) || o.chainCD > 0 || o.role === 'cleaner') continue;
+        if (Math.hypot(o.pos.x - n.pos.x, o.pos.z - n.pos.z) < 0.85) {
+          knockNPC(o, n.vel.x / speed, n.vel.z / speed, Math.min(tune.punch, speed / 7) * 0.8, true);
+          addStress(-3); n.vel.x *= 0.5; n.vel.z *= 0.5;
+        }
+      }
+    }
+    if (n.timer <= 0 && grounded) { n.state = 'getup'; n.timer = 0.5; n.stars.visible = false; }
+  } else if (n.state === 'getup') {
+    if (updateGetup(n, dt)) {
+      if (n.fight && !state.dead) { n.state = 'brawl'; n.timer = 9; n.atkCD = 0.4; n.combo = 0; setFace(n, 'angry'); say(n, pick(['너 이리 와!', '오늘 끝장 보자!', '한 대 맞았으니 두 대!', '이게 미쳤나!']), 1.6); }
+      else if (n.role === 'manager') { n.state = 'chase'; n.timer = 7; n.nagT = 0; setFace(n, 'angry'); }
+      else if (n.role === 'guard') { n.state = state.warn >= 3 ? 'pursue' : 'return'; setFace(n, 'angry'); }
+      else { n.state = 'flee'; n.timer = 2.5; setFace(n, 'scared'); if (n.hits >= 3) say(n, '살려주세요!!'); }
+    }
+  } else if (n.state === 'flee') {
+    const dx = n.pos.x - player.pos.x, dz = n.pos.z - player.pos.z, d = Math.hypot(dx, dz) || 1;
+    sp = moveToward(n, n.pos.x + dx / d * 3, n.pos.z + dz / d * 3, 3.6, dt, true);
+    n.timer -= dt;
+    if (n.timer <= 0) { n.state = 'wander'; n.target = null; setFace(n, 'normal'); }
+  } else if (n.state === 'chase') {
+    if (toPlayer > 1.4) sp = moveToward(n, player.pos.x, player.pos.z, n.def.speed || 2.8, dt, true);
+    else n.faceTo = Math.atan2(player.pos.x - n.pos.x, player.pos.z - n.pos.z);
+    n.nagT -= dt;
+    if (n.nagT <= 0 && toPlayer < 5) { say(n, pick(n.def.nag), 1.8); n.nagT = 2.2; setFace(n, 'yell'); grunt(n.def.voice, 0.12); }
+    else if (n.nagT < 1.6) setFace(n, 'angry');
+    n.timer -= dt;
+    if (n.timer <= 0) { n.state = 'wander'; n.target = null; say(n, '에휴...', 1.2); setFace(n, 'normal'); }
+  } else if (n.state === 'brawl') { // 반격: 쫓아와서 주먹
+    n.atkCD -= dt;
+    const fx = player.pos.x - n.pos.x, fz = player.pos.z - n.pos.z;
+    if (n.atkT > 0) { // 주먹 휘두르는 중
+      n.faceTo = Math.atan2(fx, fz);
+      n.atkT -= dt;
+      if (n.atkT <= 0 && toPlayer < 1.35 && standing(player)) {
+        n.combo++;
+        const d = toPlayer || 1;
+        hurtPlayer(n.role === 'manager' ? 14 : 10, fx / d, fz / d, n.combo % 3 === 0 ? 1 : 0); // 3대째엔 넘어뜨림
+        floatText(player.pos.x, 2.0, player.pos.z, pick(['퍽!', '빡!']), '#f87171', 20);
+      }
+    } else if (!standing(player)) n.faceTo = Math.atan2(fx, fz);
+    else if (toPlayer > 1.05) sp = moveToward(n, player.pos.x, player.pos.z, n.def.speed || 2.7, dt, true);
+    else if (n.atkCD <= 0) {
+      n.atkT = 0.3; n.atkCD = 1.1; n.punchT = 0.45; n.punchSide *= -1; n.punchNew = true;
+      n.faceTo = Math.atan2(fx, fz); sfx('whoosh');
+    }
+    n.timer -= dt;
+    if (n.timer <= 0 || toPlayer > 16 || state.dead) { n.state = 'wander'; n.target = null; say(n, '오늘은 봐준다...', 1.4); setFace(n, 'normal'); }
+  } else if (n.state === 'post') { // 경비: 자리 지키기
+    if (state.warn >= 3) { n.state = 'pursue'; say(n, pick(n.def.nag)); sfx('whistle'); setFace(n, 'angry'); }
+    else if (Math.hypot(n.pos.x - n.def.post[0], n.pos.z - n.def.post[1]) > 0.3) sp = moveToward(n, n.def.post[0], n.def.post[1], 1.6, dt, true);
+    else n.faceTo = 0;
+  } else if (n.state === 'pursue') {
+    sp = moveToward(n, player.pos.x, player.pos.z, 2.85, dt, true);
+    n.nagT -= dt;
+    if (n.nagT <= 0) { say(n, pick(n.def.nag), 1.4); n.nagT = 2.5; }
+    if (toPlayer < 0.95 && standing(player)) bust(n);
+    if (state.warn < 1.5) { n.state = 'return'; setFace(n, 'normal'); }
+  } else if (n.state === 'return') {
+    sp = moveToward(n, n.def.post[0], n.def.post[1], 2, dt, true);
+    if (Math.hypot(n.pos.x - n.def.post[0], n.pos.z - n.def.post[1]) < 0.4) n.state = 'post';
+    if (state.warn >= 3) n.state = 'pursue';
+  } else if (n.state === 'angry') { // 여사님 반격 후
+    n.faceTo = Math.atan2(player.pos.x - n.pos.x, player.pos.z - n.pos.z);
+    n.timer -= dt;
+    if (n.timer <= 0) { n.state = 'wander'; setFace(n, 'normal'); }
+  } else { // wander
+    if (n.talkT > 0) n.talkT -= dt;
+    else if (n.idleT > 0) n.idleT -= dt;
+    else {
+      if (!n.target) {
+        const zn = n.def.zones ? zoneById(pick(n.def.zones)) : n.home;
+        n.target = randomPointIn(zn);
+      }
+      sp = moveToward(n, n.target.x, n.target.z, 1.4, dt, true);
+      if (n.noPath) { n.noPath = false; n.target = null; n.path = null; n.idleT = 0.5; sp = 0; }
+      if (Math.hypot(n.target.x - n.pos.x, n.target.z - n.pos.z) < 0.35) { n.target = null; n.idleT = rand(1.5, 4); }
+    }
+  }
+
+  if (standing(n)) {
+    resolveChar(n, false);
+    for (const o of [player, ...npcs]) {
+      if (o === n || !standing(o)) continue;
+      const dx = n.pos.x - o.pos.x, dz = n.pos.z - o.pos.z, d = Math.hypot(dx, dz), min = n.r + o.r;
+      if (d < min && d > 0.001) { n.pos.x += dx / d * (min - d) * 0.5; n.pos.z += dz / d * (min - d) * 0.5; }
+    }
+    if (sp > 0) {
+      const moved = Math.hypot(n.pos.x - bx, n.pos.z - bz);
+      if (moved < sp * dt * 0.3) n.stuckT += dt; else n.stuckT = 0;
+      if (n.stuckT > 0.7) { // 막히면 옆으로 비켜가거나 목적지 변경
+        n.stuckT = 0;
+        n.path = null;
+        if (n.state === 'wander') { n.target = null; n.idleT = 0.3; }
+        else { n.pos.x += rand(-0.3, 0.3); n.pos.z += rand(-0.3, 0.3); }
+      }
+    }
+    n.facing = angLerp(n.facing, n.faceTo, 1 - Math.exp(-10 * dt));
+  }
+  animateHuman(n, dt, standing(n) ? sp : 0);
+  if (n.state === 'angry') n.armR.rotation.x = -2.4 + Math.sin(T * 12) * 0.4;
+  updateBubble(n, dt);
+}
+function bust(guard) {
+  if (cheat.god) return;
+  const dx = player.pos.x - guard.pos.x, dz = player.pos.z - guard.pos.z, d = Math.hypot(dx, dz) || 1;
+  hurtPlayer(25, dx / d, dz / d, 1);
+  if (state.dead) { guard.state = 'return'; return; }
+  state.warn = Math.max(0, state.warn - 2.5); state.lastStars = Math.floor(state.warn);
+  addStress(5);
+  say(guard, '경위서 쓰세요!', 2);
+  sfx('whistle');
+  showWasted('BUSTED', '경비 아저씨에게 제압당했습니다 · 경위서 1장', true);
+  guard.state = 'return';
+}
+
+function updateProps(dt) {
+  for (const p of props) {
+    if (!p.alive) continue;
+    p.hitCD -= dt;
+    if (Math.abs(p.vx) + Math.abs(p.vz) > 0.01) {
+      p.x += p.vx * dt; p.z += p.vz * dt;
+      const k = Math.exp(-6 * dt); p.vx *= k; p.vz *= k;
+      for (const w of walls) pushOutBox(p, w);
+      for (const o of props) if (o !== p && o.alive) pushOutBox(p, propBox(o));
+      p.g.position.x = p.x; p.g.position.z = p.z;
+    }
+    if (p.wobble > 0) { p.wobble = Math.max(0, p.wobble - dt * 3); p.g.rotation.z = Math.sin(T * 45) * p.wobble * 0.08; }
+  }
+}
+function updateCamera(dt) {
+  const aspect = innerWidth / innerHeight;
+  const dist = tune.camDist * (aspect < 1 ? Math.pow(1 / aspect, 0.6) : 1);
+  const a = tune.camAngle * PI / 180;
+  const tx = player.pos.x, tz = player.pos.z;
+  const k = 1 - Math.exp(-8 * dt);
+  camera.position.x = lerp(camera.position.x, tx, k);
+  camera.position.y = lerp(camera.position.y, dist * Math.sin(a), k);
+  camera.position.z = lerp(camera.position.z, tz + dist * Math.cos(a), k);
+  camera.lookAt(camera.position.x, 0.8, camera.position.z - dist * Math.cos(a));
+  if (shakeAmt > 0.001) {
+    camera.position.x += rand(-1, 1) * shakeAmt; camera.position.y += rand(-1, 1) * shakeAmt;
+    shakeAmt *= Math.exp(-12 * dt);
+  }
+  // 그림자 카메라를 4m 격자에 맞춰 움직여서 이동할 때 그림자가 번쩍이지 않게 함
+  const gx = Math.round(tx / 4) * 4, gz = Math.round(tz / 4) * 4;
+  sun.position.set(gx + 8, 25, gz + 12);
+  sun.target.position.set(gx, 0, gz);
+}
+// 가까운 사람/물건 이름표 + 💬 버튼 문구
+const targetEl = $('#target'), talkLbl = $('#btnTalk small');
+let tgt = null, tgtT = 0;
+function updateTarget(dt) {
+  tgtT -= dt;
+  if (tgtT <= 0) {
+    tgtT = 0.1; tgt = null;
+    if (standing(player) && !work.active) {
+      let nd = 2.0;
+      for (const n of npcs) { if (!standing(n)) continue; const d = Math.hypot(n.pos.x - player.pos.x, n.pos.z - player.pos.z); if (d < nd) { nd = d; tgt = { n }; } }
+      if (!tgt) {
+        let pd = 1.6;
+        for (const p of props) { if (!p.alive) continue; const d = distToBox(player.pos, propBox(p)).d; if (d < pd) { pd = d; tgt = { p }; } }
+      }
+    }
+    let label = '대화·업무';
+    if (tgt && tgt.n) {
+      targetEl.firstChild.textContent = tgt.n.name;
+      targetEl.lastChild.textContent = tgt.n.role === 'cleaner' ? '⚠️ 절대 때리지 마세요 · 💬 대화' : '💬 대화';
+      label = '대화';
+    } else if (tgt && tgt.p) {
+      const d = tgt.p.def, w = d.work ? d.work.label.replace(/ 중$/, '') : '';
+      targetEl.firstChild.textContent = d.name;
+      targetEl.lastChild.textContent = d.fixed ? '🚧 준비중' : (w ? `💬 ${w} · ` : '') + fmtWon(d.value);
+      if (w) label = w;
+    }
+    talkLbl.textContent = label;
+  }
+  const alive = tgt && (tgt.n ? standing(tgt.n) && tgt.n.bubbleT <= 0 : tgt.p.alive);
+  if (!alive) { targetEl.style.display = 'none'; return; }
+  const s = tgt.n ? toScreen(tgt.n.pos.x, 2.25 * tgt.n.s, tgt.n.pos.z) : toScreen(tgt.p.x, 1.9, tgt.p.z);
+  targetEl.style.display = 'block';
+  targetEl.style.transform = `translate(${s.x}px, ${s.y}px) translate(-50%, -100%)`;
+}
+
+let hudT = 0;
+function updateHUD(dt) {
+  hudT -= dt; if (hudT > 0) return; hudT = 0.1;
+  $('#stressFill').style.width = state.stress + '%';
+  $('#stressFill').style.background = `hsl(${120 - state.stress * 1.2}, 75%, 55%)`;
+  $('#stressNum').textContent = Math.round(state.stress);
+  $('#hpFill').style.width = state.hp + '%';
+  $('#hpNum').textContent = Math.round(state.hp);
+  $('#damage').textContent = fmtWon(state.damage);
+  $('#works').textContent = state.works + '건';
+  const w = Math.floor(state.warn);
+  $('#stars').innerHTML = '<b>' + '★'.repeat(w) + '</b>' + '★'.repeat(5 - w);
+  const zn = zoneAt(player.pos.x, player.pos.z);
+  $('#where').textContent = `📍 ${zn ? zn.name + ' ' + zn.en : ''}`;
+}
+function update(dt) {
+  T += dt;
+  addStress(0.15 * dt);
+  state.hurtT += dt;
+  if (!state.dead && state.hurtT > 5) state.hp = Math.min(100, state.hp + 4 * dt);
+  state.quietT += dt;
+  if (state.quietT > 6) { state.warn = Math.max(0, state.warn - 0.08 * dt); state.lastStars = Math.min(state.lastStars, Math.floor(state.warn)); }
+  snd.intensity = state.warn >= 3 ? 1 : 0;
+  updatePlayer(dt);
+  updateTarget(dt);
+  for (const n of npcs) updateNPC(n, dt);
+  updateProps(dt);
+  NAV.t -= dt; if (NAV.t <= 0) { NAV.t = 2; buildNav(); }
+  updateRockets(dt);
+  updateFrags(dt);
+  updatePuffs(dt);
+  updateFloats(dt);
+  updateCamera(dt);
+  updateHUD(dt);
+}
+let last = performance.now();
+function loop(now) {
+  requestAnimationFrame(loop);
+  let dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (!running) return;
+  if (hitstop > 0) { hitstop -= dt; dt = 0; }
+  update(dt);
+  renderer.render(scene, camera);
+}
+
+/* =====================================================================
+   16. 조절 패널
+   ===================================================================== */
+function syncTuneUI() {
+  for (const el of document.querySelectorAll('#tune [data-k]')) el.value = tune[el.dataset.k];
+  for (const el of document.querySelectorAll('#tune [data-out]')) {
+    const k = el.dataset.out;
+    el.textContent = k === 'camAngle' ? tune[k] + '°' : (k === 'music' || k === 'sfx') ? Math.round(tune[k] * 100) + '%' : tune[k];
+  }
+  playerShirt.color.set(tune.shirt);
+  applyVolumes();
+  applyOutlineWidth();
+}
+for (const el of document.querySelectorAll('#tune [data-k]')) {
+  el.addEventListener('input', () => {
+    const k = el.dataset.k;
+    tune[k] = el.type === 'color' ? el.value : parseFloat(el.value);
+    store.set('gta_tune2', tune); syncTuneUI();
+  });
+}
+$('#btnTune').addEventListener('click', () => { $('#tune').classList.toggle('hidden'); sfx('click'); });
+$('#tuneReset').addEventListener('click', () => { Object.assign(tune, DEFAULT_TUNE); store.set('gta_tune2', tune); syncTuneUI(); });
+$('#tuneCopy').addEventListener('click', async () => {
+  const text = '조절값: ' + JSON.stringify(tune);
+  try { await navigator.clipboard.writeText(text); banner('📋 복사됐어요! Claude에게 붙여넣어 주세요'); }
+  catch (e) { banner(text, 8000); }
+});
+for (const el of document.querySelectorAll('#tune [data-cheat]')) {
+  el.addEventListener('change', () => {
+    cheat[el.dataset.cheat] = el.checked;
+    if (cheat.noWanted) { state.warn = 0; state.lastStars = 0; }
+    sfx('click');
+  });
+}
+function setDevMode(on) {
+  devMode = on; store.set('gta_dev', on);
+  document.body.classList.toggle('devmode', on);
+  if (!on) {
+    for (const k in cheat) cheat[k] = false;
+    for (const el of document.querySelectorAll('#tune [data-cheat]')) el.checked = false;
+  }
+}
+$('#devOff').addEventListener('click', () => { setDevMode(false); banner('개발자 모드를 껐어요'); });
+// 타이틀 글자 5번 연속 탭 → 개발자 모드 켜기/끄기
+let devTaps = 0, devTapT = 0;
+$('.menu h1').addEventListener('click', () => {
+  const now = performance.now();
+  devTaps = now - devTapT < 600 ? devTaps + 1 : 1; devTapT = now;
+  if (devTaps >= 5) {
+    devTaps = 0; setDevMode(!devMode); sfx('click');
+    $('.menu .kor').textContent = devMode ? '🛠️ 개발자 모드 ON' : '그랜드 퇴사 액션';
+  }
+});
+setDevMode(devMode);
+const btnMute = $('#btnMute');
+const syncMute = () => { btnMute.textContent = muted ? '🔇' : '🔊'; applyVolumes(); };
+btnMute.addEventListener('click', () => { muted = !muted; store.set('gta_muted', muted); syncMute(); });
+syncMute(); syncTuneUI();
+
+/* =====================================================================
+   17. 시작 흐름: 로딩 → 타이틀(포스터) → 출근
+   ===================================================================== */
+const TIPS = [
+  '팁: HPLC는 1.5억입니다. 부수기 전에 한 번 더 생각하세요. 아니면 말고.',
+  '팁: 청소 여사님은 건드리지 마세요. 진심입니다.',
+  '팁: 인사팀 경고 ★3개부터 경비 아저씨가 출동합니다.',
+  '팁: 가스 실린더를 치면... 직접 확인해 보세요.',
+  '팁: 업무를 하면 스트레스가 오릅니다. 당연하죠.',
+  '팁: 탕비실 커피는 스트레스를 낮춰줍니다. 과학입니다.',
+  '팁: 날아간 동료로 다른 동료를 맞히면 연쇄 보너스!',
+  '팁: 김부장님은 맞고 나면 쫓아오면서 잔소리합니다.',
+  '팁: 소화기를 부수면 사무실이 하얘집니다.',
+];
+let selectedDept = store.get('gta_dept', 'qc');
+const deptGrid = $('#deptGrid');
+for (const d of DEPARTMENTS) {
+  const b = document.createElement('button');
+  b.className = 'dept'; b.disabled = !d.ready; b.dataset.id = d.id;
+  b.innerHTML = `<i style="background:${DEPT_COLORS[d.id]}"></i>${d.name}${d.ready ? '' : '<em>준비중</em>'}`;
+  b.addEventListener('click', () => { selectedDept = d.id; renderDeptSel(); sfx('click'); });
+  deptGrid.appendChild(b);
+}
+let selectedHero = store.get('gta_hero', 'm');
+const heroGrid = $('#heroGrid');
+for (const b of heroGrid.children) b.addEventListener('click', () => { selectedHero = b.dataset.id; renderHeroSel(); sfx('click'); });
+function renderHeroSel() { for (const b of heroGrid.children) b.classList.toggle('sel', b.dataset.id === selectedHero); }
+renderHeroSel();
+function renderDeptSel() { for (const b of deptGrid.children) b.classList.toggle('sel', b.dataset.id === selectedDept); }
+renderDeptSel();
+const inCompany = $('#inCompany');
+inCompany.value = store.get('gta_company', '');
+
+const nextFrame = () => new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
+const posterURL = 'assets/poster2.png';
+async function boot() {
+  setLoad(10, pick(TIPS)); await nextFrame();
+  buildWorld(); buildNav();
+  setLoad(45); await nextFrame();
+  await loadModels().catch(err => console.warn('3D 모델 불러오기 실패, 도형 캐릭터 사용:', err));
+  setLoad(60); await nextFrame();
+  for (const def of CAST) spawnNPC(def);
+  setLoad(75); await nextFrame();
+  setLoad(100); await nextFrame();
+  $('#loading').classList.add('hidden');
+  $('#title').classList.remove('hidden');
+  if (location.protocol === 'file:') $('#fileWarn').style.display = 'block';
+  // 테스트용: index.html?auto=qc 로 열면 바로 출근
+  const auto = new URLSearchParams(location.search).get('auto');
+  if (auto) { if (SPAWNS[auto]) selectedDept = auto; $('#btnStart').click(); }
+}
+boot().catch(err => { console.error(err); $('#loadErr').textContent = '로딩 중 오류: ' + err.message; });
+
+$('#btnStart').addEventListener('click', async () => {
+  audioInit(); sfx('click');
+  state.company = inCompany.value.trim() || '(주)한숨제약';
+  store.set('gta_company', inCompany.value.trim());
+  store.set('gta_dept', selectedDept);
+  store.set('gta_hero', selectedHero);
+  // 로딩 화면 (포스터 배경 + 팁)
+  $('#title').classList.add('hidden');
+  const ld = $('#loading'); ld.classList.remove('hidden');
+  ld.style.backgroundImage = posterURL ? `url(${posterURL})` : '';
+  $('#loadLogo').style.display = 'none';
+  setLoad(30, pick(TIPS)); await nextFrame();
+  // 간판/로고에 회사명 반영
+  for (const sg of signs) {
+    const tex = sg.kind === 'logo' ? logoTex(state.company) : signTex(state.company, sg.zone);
+    sg.mesh.material.map.dispose(); sg.mesh.material.map = tex; sg.mesh.material.needsUpdate = true;
+  }
+  const [sx, sz, sf] = SPAWNS[selectedDept] || SPAWNS.qc;
+  player = makeChar(PLAYER_LOOK(selectedHero === 'f'), { name: '나', state: 'normal' });
+  try { attachModel(player, selectedHero === 'f' ? 'hero_f' : 'hero_m'); }
+  catch (err) { console.warn('주인공 3D 모델 실패, 도형 캐릭터 사용:', err); player.body.visible = true; player.rig = null; }
+  player.pos.set(sx, 0, sz); player.facing = player.faceTo = sf;
+  camera.position.set(sx, 14, sz + 10);
+  $('#company').textContent = state.company;
+  setLoad(100);
+  await new Promise(r => setTimeout(r, 1300));
+  ld.classList.add('hidden');
+  $('#hud').classList.remove('hidden');
+  running = true; last = performance.now();
+  const zn = zoneById(selectedDept);
+  banner(`${zn.name}에 출근했습니다. 오늘도 화이팅...?`, 2600);
+  setTimeout(() => { $('#hint').style.opacity = '0'; }, 9000);
+});
+
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
