@@ -53,16 +53,21 @@
   #hud { position: fixed; inset: 0; z-index: 2; pointer-events: none; }
   #info {
     position: absolute; left: calc(10px + env(safe-area-inset-left)); top: calc(10px + env(safe-area-inset-top));
-    background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px;
-    font-size: 14px; min-width: 230px; backdrop-filter: blur(6px);
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 6px 9px;
+    font-size: 12px; width: 180px; backdrop-filter: blur(6px);
   }
-  #company { font-family: var(--kor); font-size: 18px; letter-spacing: .3px; }
-  #where { color: var(--muted); margin-bottom: 6px; }
-  .row { display: flex; align-items: center; gap: 8px; margin-top: 3px; }
-  .lbl { color: var(--muted); width: 60px; flex: none; }
-  .bar { flex: 1; height: 10px; border-radius: 5px; background: rgba(255,255,255,.12); overflow: hidden; min-width: 70px; }
+  #company { font-family: var(--kor); font-size: 14px; letter-spacing: .3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #where { color: var(--muted); margin-bottom: 3px; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+  .lbl { color: var(--muted); width: 46px; flex: none; }
+  .bar { flex: 1; height: 7px; border-radius: 4px; background: rgba(255,255,255,.12); overflow: hidden; min-width: 0; }
+  .row.money { justify-content: space-between; flex-wrap: wrap; column-gap: 8px; row-gap: 0; }
+  @media (max-height: 500px) { /* 가로로 눕힌 휴대폰 */
+    #info { font-size: 11px; width: 158px; padding: 5px 8px; }
+    #company { font-size: 13px; }
+  }
   #stressFill { height: 100%; width: 50%; background: #ffd166; transition: width .15s; }
-  #stressNum { width: 30px; text-align: right; font-variant-numeric: tabular-nums; }
+  #stressNum, #hpNum { width: 24px; text-align: right; font-variant-numeric: tabular-nums; }
   #topBtns { position: absolute; right: calc(10px + env(safe-area-inset-right)); top: calc(10px + env(safe-area-inset-top)); display: flex; gap: 8px; }
   #stars {
     position: absolute; right: calc(12px + env(safe-area-inset-right)); top: calc(62px + env(safe-area-inset-top));
@@ -236,8 +241,7 @@
     <div id="where"></div>
     <div class="row"><span class="lbl">체력</span><div class="bar"><div id="hpFill"></div></div><span id="hpNum"></span></div>
     <div class="row"><span class="lbl">스트레스</span><div class="bar"><div id="stressFill"></div></div><span id="stressNum"></span></div>
-    <div class="row"><span class="lbl">피해액</span><span id="damage">0원</span></div>
-    <div class="row"><span class="lbl">업무</span><span id="works">0건</span></div>
+    <div class="row money"><span><span class="lbl">피해액</span> <span id="damage">0원</span></span><span><span class="lbl">업무</span> <span id="works">0건</span></span></div>
   </div>
   <div id="topBtns">
     <button id="btnMute" class="icon" title="소리">🔊</button>
