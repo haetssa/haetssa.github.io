@@ -5,6 +5,3 @@ _작업용/
 게임 실행.bat
 assets/poster.png
 *.zip
-
-# 히든 돼지 캐릭터 (카카오 이모티콘 캐릭터라 공개 사이트에는 안 올림, 내 PC에서만)
-models/pig/
