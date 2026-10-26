@@ -501,9 +501,10 @@ addEventListener('pointerdown', audioInit, { once: false, passive: true });
    ===================================================================== */
 const gameEl = $('#game');
 const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MOBILE ? 1.75 : 2));
+// 폰은 해상도와 그림자 품질을 낮춰서 발열 줄임
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MOBILE ? 1.3 : 2));
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = MOBILE ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.1;
 gameEl.appendChild(renderer.domElement);
@@ -703,6 +704,13 @@ const FLOOR_DRAW = {
     x.fillStyle = 'rgba(40,45,55,.3)';
     for (let i = 0; i < 6; i++) for (let j = 0; j < 6; j++) if ((i + j) % 3 === 0) for (let a = 0; a < 5; a++) for (let b = 0; b < 5; b++) x.fillRect(i * s / 6 + 12 + a * 13, j * s / 6 + 12 + b * 13, 4, 4);
   },
+  asphalt: (x, s) => { x.fillStyle = '#4b5059'; x.fillRect(0, 0, s, s); speckle(x, s, 9000, ['30,32,36', '120,124,130', '80,84,90'], 0.15, 0.45, 2.5); },
+  paving: (x, s) => { // 보도블록 (엇갈려 쌓기)
+    x.fillStyle = '#bdb5a8'; x.fillRect(0, 0, s, s); speckle(x, s, 3000, ['90,85,78', '230,225,215'], 0.08, 0.25, 2);
+    x.strokeStyle = 'rgba(80,72,64,.45)'; x.lineWidth = 3; const r = s / 8;
+    for (let j = 0; j < 8; j++) { x.beginPath(); x.moveTo(0, j * r); x.lineTo(s, j * r); x.stroke(); for (let i = 0; i <= 4; i++) { const xx = (i + (j % 2) * 0.5) * s / 4; x.beginPath(); x.moveTo(xx, j * r); x.lineTo(xx, j * r + r); x.stroke(); } }
+  },
+  grass: (x, s) => { x.fillStyle = '#5d9c4a'; x.fillRect(0, 0, s, s); speckle(x, s, 12000, ['60,110,45', '120,180,90', '80,140,60'], 0.25, 0.6, 3); },
   concrete: (x, s) => {
     x.fillStyle = '#7d828a'; x.fillRect(0, 0, s, s); speckle(x, s, 4000, ['50,55,60', '160,165,170'], 0.1, 0.3, 3);
     x.save(); x.translate(s / 2, s / 2); x.rotate(-0.3); x.fillStyle = 'rgba(255,210,0,.25)'; x.font = 'bold 40px sans-serif'; x.textAlign = 'center'; x.fillText('공사중', 0, 10); x.restore();
@@ -835,6 +843,21 @@ function cabinetBase(g, w, d, h, c, top) {
   if (top != null) B(g, w + 0.04, 0.04, d + 0.04, top, 0, h + 0.02, 0);
 }
 
+// 자동차 (앞 = +z). k: 크기 배율, lux: 금색 장식
+function carBody(g, c, k = 1, lux) {
+  const L = 4.1 * k, W = 1.85 * Math.min(k, 1.05);
+  R(g, W, 0.6, L, 0.2, c, 0, 0.55, 0, GLOSS);
+  R(g, W * 0.86, 0.55, L * 0.5, 0.2, c, 0, 1.1, -L * 0.06, GLOSS);
+  B(g, W * 0.78, 0.4, 0.05, 0x1e293b, 0, 1.1, L * 0.19, GLOSS); B(g, W * 0.78, 0.38, 0.05, 0x1e293b, 0, 1.1, -L * 0.31, GLOSS);
+  for (const sx of [-1, 1]) B(g, 0.05, 0.36, L * 0.42, 0x1e293b, sx * W * 0.43, 1.1, -L * 0.06, GLOSS);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) C(g, 0.34, 0.34, 0.24, 0x111827, sx * W * 0.46, 0.34, sz * L * 0.3).rotation.z = H;
+  for (const sx of [-1, 1]) {
+    B(g, 0.35, 0.12, 0.04, 0xfef9c3, sx * W * 0.32, 0.66, L / 2, { e: 0xfef08a, ei: 0.6 });
+    B(g, 0.3, 0.1, 0.04, 0xdc2626, sx * W * 0.34, 0.68, -L / 2, { e: 0xdc2626, ei: 0.4 });
+  }
+  B(g, 0.5, 0.14, 0.03, 0xffffff, 0, 0.45, L / 2 + 0.01);
+  if (lux) { S(g, 0.08, 0xd4a017, 0, 0.82, L / 2, METAL); B(g, 0.04, 0.04, L * 0.9, 0xd4a017, W * 0.5, 0.62, 0, METAL); B(g, 0.04, 0.04, L * 0.9, 0xd4a017, -W * 0.5, 0.62, 0, METAL); }
+}
 const PROPS = {
   desk: { name: '업무용 책상', w: 1.6, d: 0.8, hp: 3, value: 1500000, mass: 3, snd: 'wood', work: WORK.pc, build(g) {
     R(g, 1.6, 0.04, 0.8, 0.01, 0xc9a27a, 0, 0.74, 0);
@@ -1356,6 +1379,51 @@ const PROPS = {
   cone: { name: '라바콘', w: 0.35, d: 0.35, hp: 1, value: 15000, mass: 0.4, snd: 'plastic', build(g) {
     B(g, 0.35, 0.03, 0.35, 0xf97316, 0, 0.015, 0); C(g, 0.03, 0.14, 0.55, 0xf97316, 0, 0.3, 0); C(g, 0.08, 0.1, 0.08, 0xffffff, 0, 0.3, 0);
   }},
+  // ===== 건물 밖 (hp/mass Infinity = 부서지지도 밀리지도 않음) =====
+  car: { name: '직원 승용차', w: 1.9, d: 4.2, hp: 10, value: 28000000, mass: 30, snd: 'metal', breakText: '🚨 삐뽀삐뽀 (차량 경보)', build(g, opt = {}) {
+    carBody(g, opt.color ?? pick([0xf8fafc, 0x1f2937, 0x9ca3af, 0x991b1b, 0x1e3a8a, 0xd6d3d1, 0xf8fafc]));
+  }},
+  ceo_car: { name: '대표님 외제차', w: 2, d: 4.6, hp: 14, value: 250000000, mass: 40, snd: 'metal', breakText: '🚨 대표님 차가!!!', build(g) {
+    carBody(g, 0x0b0b0f, 1.1, true);
+  }},
+  truck: { name: '택배 트럭', w: 2.2, d: 5.2, hp: 12, value: 45000000, mass: 45, snd: 'metal', breakText: '📦 택배 대방출!', build(g) {
+    R(g, 2.1, 1.3, 1.5, 0.15, 0xf8fafc, 0, 0.95, 1.8, GLOSS); // 운전석 (앞 = +z)
+    B(g, 1.8, 0.5, 0.05, 0x1e293b, 0, 1.3, 2.56, GLOSS);
+    R(g, 2.2, 2.2, 3.6, 0.08, 0xfacc15, 0, 1.45, -0.8);
+    B(g, 2.22, 0.25, 3.62, 0x92400e, 0, 0.75, -0.8);
+    for (const sz of [-1.8, 1.8]) for (const sx of [-1, 1]) C(g, 0.4, 0.4, 0.28, 0x111827, sx * 1.02, 0.4, sz).rotation.z = H;
+  }},
+  tree: { name: '조경수', w: 0.6, d: 0.6, hp: Infinity, value: 3000000, mass: Infinity, snd: 'wood', build(g) {
+    C(g, 0.14, 0.18, 1.6, 0x7c5a3a, 0, 0.8, 0);
+    S(g, 0.85, 0x3f7f3a, 0, 2.1, 0); S(g, 0.6, 0x4d9444, 0.45, 2.5, 0.2); S(g, 0.55, 0x357032, -0.4, 2.6, -0.15);
+  }},
+  lamp: { name: '가로등', w: 0.3, d: 0.3, hp: Infinity, value: 1200000, mass: Infinity, snd: 'metal', build(g) {
+    C(g, 0.06, 0.08, 3.6, 0x374151, 0, 1.8, 0, METAL);
+    B(g, 0.08, 0.06, 0.7, 0x374151, 0, 3.55, 0.3, METAL);
+    B(g, 0.3, 0.1, 0.4, 0xfef9c3, 0, 3.48, 0.6, { e: 0xfef08a, ei: 0.8 });
+  }},
+  bench: { name: '벤치', w: 1.6, d: 0.6, hp: 2, value: 300000, mass: 3, snd: 'wood', build(g) {
+    for (const x of [-0.65, 0.65]) B(g, 0.08, 0.42, 0.5, 0x374151, x, 0.21, 0, METAL);
+    for (let i = 0; i < 3; i++) B(g, 1.6, 0.04, 0.14, 0xa16207, 0, 0.44, -0.18 + i * 0.18);
+    for (let i = 0; i < 2; i++) B(g, 1.6, 0.12, 0.03, 0xa16207, 0, 0.62 + i * 0.16, -0.26);
+  }},
+  ashtray: { name: '스탠드 재떨이', w: 0.4, d: 0.4, hp: 1, value: 80000, mass: 0.8, snd: 'metal', breakText: '꽁초 폭탄!', build(g) {
+    C(g, 0.18, 0.16, 0.8, 0x9ca3af, 0, 0.4, 0, METAL); C(g, 0.19, 0.19, 0.04, 0x52525b, 0, 0.82, 0);
+    for (let i = 0; i < 5; i++) B(g, 0.06, 0.015, 0.015, 0xf5f5f4, rand(-0.1, 0.1), 0.85, rand(-0.1, 0.1));
+  }},
+  booth: { name: '정문 경비실', w: 2.4, d: 2.2, hp: Infinity, value: 20000000, mass: Infinity, snd: 'metal', build(g) {
+    R(g, 2.4, 2.4, 2.2, 0.05, 0xe5e7eb, 0, 1.2, 0);
+    B(g, 2.6, 0.15, 2.4, 0x1e3a8a, 0, 2.45, 0);
+    B(g, 1.6, 0.8, 0.04, 0x93c5fd, 0, 1.5, 1.11, GLOSS); B(g, 0.04, 0.8, 1.2, 0x93c5fd, -1.21, 1.5, 0, GLOSS);
+  }},
+  barrier: { name: '주차 차단기', w: 4.8, d: 0.3, hp: Infinity, value: 3000000, mass: Infinity, snd: 'metal', build(g) {
+    R(g, 0.4, 1.0, 0.4, 0.04, 0xfacc15, -2.2, 0.5, 0);
+    for (let i = 0; i < 6; i++) B(g, 0.7, 0.1, 0.08, i % 2 ? 0xef4444 : 0xf8fafc, -1.75 + i * 0.7, 0.85, 0);
+  }},
+  flag: { name: '게양대', w: 0.3, d: 0.3, hp: Infinity, value: 500000, mass: Infinity, snd: 'metal', build(g, opt = {}) {
+    C(g, 0.04, 0.05, 5, 0xd1d5db, 0, 2.5, 0, METAL); S(g, 0.07, 0xd4a017, 0, 5.05, 0);
+    B(g, 0.9, 0.6, 0.02, opt.color ?? 0xffffff, 0.47, 4.6, 0);
+  }},
   locked_door: { name: '잠긴 문', w: 1.4, d: 0.3, hp: Infinity, value: 0, mass: Infinity, snd: 'wood', fixed: true, build(g, opt = {}) {
     R(g, 1.3, 2.1, 0.1, 0.02, 0x7a5233, 0, 1.05, 0);
     B(g, 0.05, 0.05, 0.12, 0xd4a017, 0.5, 1.0, 0.03, METAL);
@@ -1368,8 +1436,9 @@ const PROPS = {
 /* =====================================================================
    7. 맵: 구역 / 벽 / 배치
    ===================================================================== */
-// 북쪽 방(z -14..-2) · 복도(z -2..2) · 남쪽 방(z 2..14), 동서로 -MAP_X..MAP_X
-const MAP_X = 64;
+// 북쪽 방(z -14..-2) · 복도(z -2..2) · 남쪽 방(z 2..14) · 건물 밖 앞마당(z 14..MAP_Z1), 동서로 -MAP_X..MAP_X
+const MAP_X = 64, MAP_Z0 = -14, MAP_Z1 = 34;
+const GATE_X = 54; // 앞마당 남쪽 울타리의 정문 위치
 const ZONES = [
   { id: 'prod',   name: '생산동',     en: 'Production', x0: -64, x1: -40, z0: -14, z1: -2, floor: 'epoxy',  color: '#3b82f6', doors: [-52], doorW: 3 },
   { id: 'rnd',    name: '연구소',     en: 'R&D',      x0: -40, x1: -16, z0: -14, z1: -2, floor: 'lab',      color: '#2f9e8f', doors: [-32, -21] },
@@ -1378,13 +1447,17 @@ const ZONES = [
   { id: 'pantry', name: '탕비실',     en: 'Pantry',   x0: 22,  x1: 40,  z0: -14, z1: -2, floor: 'wood',     color: '#b45309', doors: [30.2] },
   { id: 'anal',   name: '분석센터',   en: 'Analysis', x0: 40,  x1: 64,  z0: -14, z1: -2, floor: 'lab',      color: '#0ea5e9', doors: [47, 58] },
   { id: 'hall',   name: '복도',       en: 'Hallway',  x0: -64, x1: 64,  z0: -2,  z1: 2,  floor: 'tile',     color: '#94a3b8', doors: [] },
-  { id: 'lounge', name: '휴게실',     en: 'Lounge',   x0: -64, x1: -40, z0: 2,   z1: 14, floor: 'wood',     color: '#f472b6', doors: [-52] },
+  { id: 'lounge', name: '휴게실',     en: 'Lounge',   x0: -64, x1: -40, z0: 2,   z1: 14, floor: 'wood',     color: '#f472b6', doors: [-52], front: [-52] },
   { id: 'meet',   name: '대회의실',   en: 'Meeting',  x0: -40, x1: -26, z0: 2,   z1: 14, floor: 'carpet2',  color: '#7c3aed', doors: [-37.4] },
-  { id: 'sales',  name: '영업부',     en: 'Sales',    x0: -26, x1: 2,   z0: 2,   z1: 14, floor: 'carpet',   color: '#e07a2f', doors: [-18.8, -6.8] },
+  { id: 'sales',  name: '영업부',     en: 'Sales',    x0: -26, x1: 2,   z0: 2,   z1: 14, floor: 'carpet',   color: '#e07a2f', doors: [-18.8, -6.8], front: [-12] },
   { id: 'hr',     name: '인사팀',     en: 'HR',       x0: 2,   x1: 14,  z0: 2,   z1: 14, floor: 'concrete', color: '#ef4444', doors: [8],  locked: true },
   { id: 'fin',    name: '재무팀',     en: 'Finance',  x0: 14,  x1: 26,  z0: 2,   z1: 14, floor: 'concrete', color: '#14b8a6', doors: [20], locked: true },
   { id: 'ceo',    name: '대표이사실', en: 'CEO',      x0: 26,  x1: 40,  z0: 2,   z1: 14, floor: 'concrete', color: '#a855f7', doors: [33], locked: true },
-  { id: 'it',     name: '전산실',     en: 'IT',       x0: 40,  x1: 64,  z0: 2,   z1: 14, floor: 'raised',   color: '#22c55e', doors: [46] },
+  { id: 'it',     name: '전산실',     en: 'IT',       x0: 40,  x1: 64,  z0: 2,   z1: 14, floor: 'raised',   color: '#22c55e', doors: [46], front: [42.2] },
+  // ----- 건물 밖 (front: 남쪽 방에서 바로 나가는 문) -----
+  { id: 'smoke',   name: '흡연구역',   en: 'Smoking Area', x0: -64, x1: -40, z0: 14, z1: MAP_Z1, floor: 'paving',  color: '#78716c', doors: [], outdoor: true },
+  { id: 'parking', name: '주차장',     en: 'Parking',  x0: -40, x1: 40,  z0: 14,  z1: MAP_Z1, floor: 'asphalt', color: '#475569', doors: [], outdoor: true },
+  { id: 'gate',    name: '정문',       en: 'Main Gate', x0: 40, x1: 64,  z0: 14,  z1: MAP_Z1, floor: 'paving',  color: '#a16207', doors: [], outdoor: true },
 ];
 const zoneById = id => ZONES.find(z => z.id === id);
 function zoneAt(x, z) {
@@ -1496,6 +1569,26 @@ const LAYOUT = [
 ];
 
 const walls = [], props = [], npcs = [], signs = [];
+// ---- 건물 밖 ----
+LAYOUT.push(
+  // 흡연구역
+  ['vending', -63.4, 16, H], ['vending', -63.4, 17.1, H], ['bench', -57, 18], ['bench', -47, 18], ['bench', -60.6, 22.5, H],
+  ['ashtray', -55.6, 17.6], ['ashtray', -48.4, 17.6], ['ashtray', -52, 22], ['trash', -49.3, 15.4], ['lamp', -45, 15.6],
+  ['tree', -62, 29], ['tree', -59.5, 32.3], ['tree', -44, 32.3], ['tree', -41.5, 24],
+  // 주차장
+  ['truck', -30, 29, PI], ['cardboard', -28.2, 26.3], ['cardboard', -27.5, 26.1], ['cardboard', -28, 25.6], ['cone', 31.4, 17.3],
+  ...[-34, -22, -2, 10, 22].map(x => ['lamp', x, 15.6]),
+  ...[-36, -18, -6, 6, 18, 30].map(x => ['tree', x, 32.8]),
+  // 정문
+  ['booth', 58.6, 30.8], ['barrier', GATE_X, MAP_Z1 - 0.45], ['lamp', 50, 15.6], ['lamp', GATE_X - 3, 32.6],
+  ['flag', 44, 18.5, 0, { color: 0xffffff }], ['flag', 45.6, 18.5, 0, { color: 0x22c55e }], ['flag', 47.2, 18.5, 0, { color: 0x3b82f6 }],
+  ['tree', 61.5, 15.8], ['tree', 61.8, 19.5], ['tree', 41.5, 32.6], ['tree', 63, 26],
+);
+// 주차 칸마다 65% 확률로 차 (대표님 자리는 항상, 트럭 자리는 비움)
+for (const zc of [20, 29]) for (let x = -36; x <= 36; x += 3) {
+  if (zc === 20 && x === 33) LAYOUT.push(['ceo_car', x, zc, PI]);
+  else if (!(zc === 29 && x === -30) && Math.random() < 0.65) LAYOUT.push(['car', x, zc, Math.random() < 0.5 ? 0 : PI]);
+}
 const staticG = new THREE.Group();
 
 function wallSeg(x0, x1, z0, z1, kind) {
@@ -1504,6 +1597,7 @@ function wallSeg(x0, x1, z0, z1, kind) {
   if (kind === 'back') staticG.add(box(w, 3.4, d, 0xe9e6df, cx, 1.7, cz));
   else if (kind === 'side') staticG.add(box(w, 1.0, d, 0xd6d2ca, cx, 0.5, cz));
   else if (kind === 'front') staticG.add(box(w, 0.45, d, 0x8a93a3, cx, 0.225, cz));
+  else if (kind === 'hedge') { staticG.add(box(w + 0.2, 0.8, d + 0.2, 0x3f7a3a, cx, 0.4, cz)); staticG.add(box(w + 0.1, 0.12, d + 0.1, 0x5a9a4a, cx, 0.84, cz)); }
   else if (kind === 'glass') {
     staticG.add(box(w, 0.12, d, 0x9ca3af, cx, 0.06, cz, METAL));
     const gl = box(w, 1.9, d * 0.4, 0xbfdbfe, cx, 1.07, cz, GLASS); gl.castShadow = false; staticG.add(gl);
@@ -1532,25 +1626,27 @@ function addPlane(tex, w, h, x, y, z, rotY = 0, basic = true, keepRef) {
   return m;
 }
 
+function floorPlane(kind, x0, x1, z0, z1, y = 0) {
+  const w = x1 - x0, d = z1 - z0;
+  const geo = new THREE.PlaneGeometry(w, d);
+  const uv = geo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * w / 4, uv.getY(i) * d / 4);
+  const fl = new THREE.Mesh(geo, floorMat(kind));
+  fl.rotation.x = -H; fl.position.set((x0 + x1) / 2, y, (z0 + z1) / 2); fl.receiveShadow = true;
+  staticG.add(fl);
+}
 function buildWorld() {
   // 바닥
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(260, 220), mat(0x1e2330));
   ground.rotation.x = -H; ground.position.y = -0.02; scene.add(ground);
-  for (const zn of ZONES) {
-    const w = zn.x1 - zn.x0, d = zn.z1 - zn.z0;
-    const geo = new THREE.PlaneGeometry(w, d);
-    const uv = geo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * w / 4, uv.getY(i) * d / 4);
-    const fl = new THREE.Mesh(geo, floorMat(zn.floor));
-    fl.rotation.x = -H; fl.position.set((zn.x0 + zn.x1) / 2, 0, (zn.z0 + zn.z1) / 2); fl.receiveShadow = true;
-    staticG.add(fl);
-  }
+  for (const zn of ZONES) floorPlane(zn.floor, zn.x0, zn.x1, zn.z0, zn.z1);
   // 외벽
   const X = MAP_X;
   wallSeg(-X - 0.3, X + 0.3, -14.3, -14, 'back');
   wallSeg(-X - 0.3, -X, -14, 14.3, 'side'); wallSeg(X, X + 0.3, -14, 14.3, 'side');
-  wallSeg(-X, X, 14, 14.3, 'front');
+  wallX(14.15, -X, X, ZONES.flatMap(z => (z.front || []).map(x => [x - 1.2, x + 1.2])), 'front');
+  buildYard();
   // 복도 양쪽 칸막이 (문 구멍 포함)
-  const gapsOf = north => ZONES.filter(z => z.north === north && z.id !== 'hall' && !z.locked)
+  const gapsOf = north => ZONES.filter(z => z.north === north && z.id !== 'hall' && !z.locked && !z.outdoor)
     .flatMap(z => z.doors.map(x => [x - (z.doorW || 2.2) / 2, x + (z.doorW || 2.2) / 2]));
   wallX(-2, -X, X, gapsOf(true), 'part');
   wallX(2, -X, X, gapsOf(false), 'part');
@@ -1576,7 +1672,7 @@ function buildWorld() {
     }
   }
   // 부서 간판
-  for (const zn of ZONES.filter(z => z.id !== 'hall' && z.id !== 'lobby')) {
+  for (const zn of ZONES.filter(z => z.id !== 'hall' && z.id !== 'lobby' && !z.outdoor)) {
     const cx = (zn.x0 + zn.x1) / 2;
     if (zn.north) addPlane(signTex('', zn), 3.6, 0.9, cx, 2.9, -13.97, 0, true, { zone: zn, kind: 'sign' });
     else if (!zn.locked) for (const dx of zn.doors) addPlane(signTex('', zn), 1.6, 0.4, dx, 2.15, 2.12, 0, true, { zone: zn, kind: 'sign' });
@@ -1605,6 +1701,31 @@ function buildWorld() {
   bake(staticG); outline(staticG, 'wall'); scene.add(staticG);
 }
 
+// 건물 밖: 흡연구역(서) · 주차장(가운데) · 정문(동). 남쪽 끝은 생울타리, 그 너머는 도로 (풍경)
+function buildYard() {
+  const X = MAP_X, Z = MAP_Z1;
+  wallSeg(-X - 0.3, -X, 14.3, Z, 'hedge'); wallSeg(X, X + 0.3, 14.3, Z, 'hedge');
+  wallX(Z, -X - 0.3, X + 0.3, [[GATE_X - 2.5, GATE_X + 2.5]], 'hedge');
+  floorPlane('paving', -130, 130, Z + 0.1, Z + 2.2, 0.01);
+  floorPlane('asphalt', -130, 130, Z + 2.2, Z + 14, 0.01);
+  for (let x = -128; x <= 128; x += 5) staticG.add(box(2.4, 0.012, 0.16, 0xf1f5f9, x, 0.02, Z + 8));
+  floorPlane('paving', GATE_X - 2.5, GATE_X + 2.5, Z - 0.2, Z + 0.2, 0.012);
+  // 건물 앞 보도 + 연석
+  floorPlane('paving', -40, 40, 14, 16.6, 0.01);
+  staticG.add(box(80, 0.1, 0.2, 0xa8a29e, 0, 0.05, 16.6));
+  // 주차선
+  for (const zc of [20, 29]) for (let x = -37.5; x <= 37.5; x += 3) staticG.add(box(0.1, 0.012, 4.6, 0xf1f5f9, x, 0.02, zc));
+  // 잔디 화단 (흡연구역 · 정문)
+  floorPlane('grass', -64, -58, 27, 34, 0.012); floorPlane('grass', 58, 64, 14, 22, 0.012);
+  // 표지판
+  const post = (x, z, tex) => { staticG.add(box(0.07, 1.25, 0.07, 0x6b7280, x, 0.62, z)); addPlane(tex, 0.55, 0.78, x, 1.55, z + 0.05, 0, false); };
+  post(34.6, 17.2, posterTex('대표이사', ['전용 주차', '견인 조치'], '#7c3aed'));
+  post(-49.6, 15.2, posterTex('흡연구역', ['꽁초는', '재떨이에'], '#78716c'));
+  post(GATE_X + 3.2, Z - 0.6, posterTex('외부인', ['출입 시', '방문증 필수'], '#a16207'));
+  // 회사 표지석 (로고는 출근할 때 회사 이름으로 바뀜)
+  staticG.add(rbox(3.4, 1.5, 0.8, 0.15, 0x8b8178, 47, 0.75, 31.2)); walls.push({ x0: 45.3, x1: 48.7, z0: 30.8, z1: 31.6 });
+  addPlane(logoTex('(주)한숨제약'), 3.0, 1.17, 47, 0.8, 31.62, 0, true, { kind: 'logo' });
+}
 function addProp(type, x, z, rot, opt) {
   const def = PROPS[type];
   const g = new THREE.Group(); def.build(g, opt);
@@ -1671,14 +1792,14 @@ function resolveChar(c, flying) {
       bounce(c.vel, n, 0.3);
     }
   }
-  c.pos.x = clamp(c.pos.x, -MAP_X + 0.3, MAP_X - 0.3); c.pos.z = clamp(c.pos.z, -13.7, 13.7);
+  c.pos.x = clamp(c.pos.x, -MAP_X + 0.3, MAP_X - 0.3); c.pos.z = clamp(c.pos.z, MAP_Z0 + 0.3, MAP_Z1 - 0.3);
 }
 function insideAnyProp(x, z, r) {
   return props.some(p => p.alive && distToBox({ x, z }, propBox(p)).d < r + 0.15);
 }
 
 // ---------- 길 찾기: 맵을 0.5m 칸으로 나눠 벽·기물 칸을 막고 A*로 돌아가는 길을 찾음 ----------
-const NAV = { cell: 0.5, x0: -MAP_X, z0: -14, w: MAP_X * 4, h: 56, blocked: null, t: 0 };
+const NAV = { cell: 0.5, x0: -MAP_X, z0: MAP_Z0, w: MAP_X * 4, h: (MAP_Z1 - MAP_Z0) * 2, blocked: null, t: 0 };
 function buildNav() {
   const { cell, x0, z0, w, h } = NAV, r = 0.28; // 사람 반지름만큼 벽을 부풀림
   const b = NAV.blocked || (NAV.blocked = new Uint8Array(w * h));
@@ -2006,7 +2127,7 @@ function makeHuman(L) {
    ===================================================================== */
 // models/<이름>/<이름>.fbx + texture.jpg (Rodin 텍스처를 1024 JPG로 줄인 것)
 const MODELS = Object.fromEntries(
-  ['kim', 'kang', 'nam', 'oh', 'han', 'lee', 'mun', 'guard', 'cleaner', 'worker', 'hero_m', 'hero_f']
+  ['kim', 'kang', 'nam', 'oh', 'han', 'lee', 'mun', 'guard', 'cleaner', 'worker', 'hero_m', 'hero_f', 'pig']
     .map(k => [k, { fbx: `models/${k}/${k}.fbx`, tex: `models/${k}/texture.jpg` }]));
 // 모든 캐릭터가 같이 쓰는 동작 (Mixamo 뼈 구조가 같아서 공유 가능). 없는 파일은 건너뜀
 const ANIM_NAMES = ['idle', 'walk', 'run', 'yell', 'fall', 'getup', 'punch', 'hit'];
@@ -2037,7 +2158,7 @@ async function loadModels() {
 // 샌드백 치기 동작(3초)에서 오른손/왼손이 가장 앞으로 뻗은 순간을 찾아 짧은 잽 2개로 잘라 씀
 // → 대상이 없어도 클릭 한 번에 바로 주먹이 나감
 function makePunchClips() {
-  const lib = Object.values(modelLib)[0], src = clipLib.punch;
+  const lib = Object.entries(modelLib).find(([k]) => k !== 'pig')?.[1], src = clipLib.punch;
   if (!lib || !src) return;
   const root = SkeletonUtils.clone(lib.root), mixer = new THREE.AnimationMixer(root);
   mixer.clipAction(src).play();
@@ -2130,7 +2251,7 @@ function outlineSkinned(root) {
 }
 // 도형 캐릭터의 몸을 숨기고 3D 모델을 붙임 (이름표·별·말풍선 등은 기존 그대로 사용)
 // 색 변형: 피부색 픽셀은 그대로 두고 옷·소품 색만 색상환에서 돌림 (모델 하나로 여러 명 만들기)
-// v = { hue: 회전 각도(도), sat: 채도 배율, light: 밝기 더하기(-1~1), w: 몸 너비 배율 }
+// v = { hue: 회전 각도(도), sat: 채도 배율, light: 밝기 더하기(-1~1), w: 몸 너비 배율, h: 키 배율 }
 const variantTexCache = new Map();
 function variantTex(key, v) {
   const id = key + JSON.stringify(v);
@@ -2158,7 +2279,7 @@ function attachModel(c, key, v) {
   const lib = modelLib[key];
   if (!lib) return;
   const m = SkeletonUtils.clone(lib.root);
-  m.scale.multiplyScalar(1.82 * c.s / lib.height);
+  m.scale.multiplyScalar(1.82 * c.s * (v?.h || 1) / lib.height);
   if (v) {
     if (v.w) { m.scale.x *= v.w; m.scale.z *= v.w; }
     if (lib.tex && (v.hue || v.sat != null || v.light)) {
@@ -2167,6 +2288,12 @@ function attachModel(c, key, v) {
     }
   }
   outlineSkinned(m);
+  if (key === 'pig') {
+    c.rig = { m, pig: makePigRig(m) };
+    c.body.visible = false;
+    c.g.add(m);
+    return;
+  }
   const mixer = new THREE.AnimationMixer(m), acts = {};
   for (const name in clipLib) acts[name] = mixer.clipAction(clipLib[name]);
   for (const name of ['fall', 'getup', 'punchR', 'punchL']) if (acts[name]) { acts[name].setLoop(THREE.LoopOnce); acts[name].clampWhenFinished = true; }
@@ -2187,6 +2314,7 @@ function playRig(c, name, fade = 0.2) {
 }
 function updateRig(c, dt, speed) {
   const r = c.rig;
+  if (r.pig) return updatePig(c, dt, speed);
   let want = 'idle';
   if (c.state === 'knocked') want = 'fall';
   else if (c.state === 'getup') want = 'getup';
@@ -2201,6 +2329,78 @@ function updateRig(c, dt, speed) {
   // 이동 속도에 맞춰 걷기/뛰기 동작 속도 조절 (발 미끄러짐 줄이기)
   a.timeScale = r.cur === 'run' ? clamp(speed / 4.4, 0.45, 1.5) : r.cur === 'walk' ? speed / 1.4 : r.cur === 'getup' ? 1.6 : r.cur.startsWith('punch') ? 1.3 : 1;
   r.mixer.update(dt);
+}
+// 돼지 (히든 주인공): 팔다리가 짧고 배가 커서 사람 동작을 쓰면 메쉬가 몸을 파고듦
+// → Mixamo 동작 대신 뼈를 코드로 조금씩만 돌려서 뒤뚱뒤뚱 움직임
+const PIG_BONES = ['Head', 'LeftArm', 'RightArm', 'LeftUpLeg', 'RightUpLeg'];
+const AX = { x: new THREE.Vector3(1, 0, 0), y: new THREE.Vector3(0, 1, 0), z: new THREE.Vector3(0, 0, 1) };
+function makePigRig(m) {
+  const b = {}, v = new THREE.Vector3();
+  m.updateMatrixWorld(true);
+  for (const n of PIG_BONES) {
+    const o = m.getObjectByName('mixamorig' + n);
+    if (!o) throw new Error('돼지 뼈 없음: ' + n);
+    // side: 모델 기준 왼쪽(+1)/오른쪽(-1) — 팔을 내리거나 앞으로 뻗을 때 돌리는 방향
+    b[n] = { o, bind: o.quaternion.clone(), side: Math.sign(m.worldToLocal(o.getWorldPosition(v)).x) || 1 };
+  }
+  // 누웠을 때 바닥에 파묻히지 않게 등 두께만큼 띄움
+  const back = Math.max(0.05, -new THREE.Box3().setFromObject(m).min.z);
+  return { b, back, base: m.scale.clone(), eyes: addPigEyes(m, b.Head.o) };
+}
+// 눈: 텍스처 눈은 위에서 내려다보면 납작해 보여서, 까만 구슬을 머리 뼈에 붙임 (어느 각도에서도 동그람)
+// 위치는 모델 파일 좌표 (_작업용/도구/pigeye_erase.py로 텍스처 눈 자리에서 계산, 텍스처 눈은 지움)
+const PIG_EYES = [[-0.12, -0.479, 1.371], [0.12, -0.479, 1.371]], PIG_EYE_R = 0.042;
+const pigEyeMat = new THREE.MeshBasicMaterial({ color: 0x1a1414 });
+function addPigEyes(m, head) {
+  let mesh = null;
+  m.traverse(o => { if (o.isSkinnedMesh && !mesh) mesh = o; });
+  const s = mesh.matrixWorld.getMaxScaleOnAxis(), nm = new THREE.Matrix3().getNormalMatrix(mesh.matrixWorld);
+  const out = new THREE.Vector3(0, -1, 0.08).applyMatrix3(nm).normalize(); // 얼굴 바깥 방향
+  return PIG_EYES.map(p => {
+    const e = new THREE.Mesh(new THREE.SphereGeometry(PIG_EYE_R * s, 16, 12), pigEyeMat);
+    e.position.set(...p).applyMatrix4(mesh.matrixWorld).addScaledVector(out, PIG_EYE_R * s * 0.55); // 원래 볼록한 눈 자리에 파묻히지 않게 앞으로
+    e.quaternion.setFromUnitVectors(AX.z, out);
+    e.scale.z = 0.75; // 얼굴에 붙은 살짝 납작한 구슬
+    e.userData.noOutline = true;
+    head.attach(e);
+    return e;
+  });
+}
+// 모델 기준 축으로 뼈를 돌림 (뼈마다 로컬 축 방향이 달라서 부모 기준 축으로 바꿔서 적용)
+const _pq = new THREE.Quaternion(), _mq = new THREE.Quaternion(), _rq = new THREE.Quaternion(), _ax = new THREE.Vector3();
+function turnBone(m, o, ax, ang) {
+  m.getWorldQuaternion(_mq); o.parent.getWorldQuaternion(_pq);
+  _ax.copy(ax).applyQuaternion(_mq).applyQuaternion(_pq.invert());
+  o.quaternion.premultiply(_rq.setFromAxisAngle(_ax, ang));
+}
+function updatePig(c, dt, speed) {
+  const { m, pig } = c.rig, { b, base } = pig;
+  for (const n in b) b[n].o.quaternion.copy(b[n].bind);
+  const down = !standing(c), amp = Math.min(1, speed / 2.5);
+  const sw = Math.sin(c.walk * 1.5) * amp; // 다리가 짧아서 사람보다 빠른 걸음
+  const punch = c.punchT > 0 ? 1 : clamp(1 + c.punchT / 0.12, 0, 1);
+  // 다리: 짧게 앞뒤로 (넘어져 있으면 버둥버둥)
+  const leg = down ? Math.sin(T * 14) * 0.35 : sw * 0.5;
+  turnBone(m, b.LeftUpLeg.o, AX.x, leg);
+  turnBone(m, b.RightUpLeg.o, AX.x, -leg);
+  // 팔: T자세에서 살짝 내리고, 걸을 때 파닥파닥, 주먹 지를 때는 앞으로 쭉
+  let twist = 0;
+  for (const n of ['LeftArm', 'RightArm']) {
+    const a = b[n], hit = punch > 0 && (c.punchSide > 0) === (n === 'RightArm');
+    const flap = down ? Math.sin(T * 16 + a.side) * 0.4 : sw * 0.35 * a.side;
+    turnBone(m, a.o, AX.z, -a.side * (hit ? 0.1 : 0.6 + flap));
+    if (hit) { turnBone(m, a.o, AX.y, -a.side * H * punch); twist = -a.side * 0.3 * punch; }
+  }
+  // 머리: 두리번거리기 + 걸을 때 갸웃갸웃
+  turnBone(m, b.Head.o, AX.y, c.head.rotation.y * 0.8);
+  turnBone(m, b.Head.o, AX.z, -sw * 0.1);
+  // 몸 전체: 좌우 뒤뚱 + 통통 튀기 + 가만히 있을 때 숨쉬기
+  // 넘어짐은 도형 몸의 기울기(0 → -H, 뒤로 벌러덩)를 그대로 따라감
+  const knock = c.body.rotation.x;
+  const breathe = speed > 0.1 || down ? 0 : Math.sin(T * 2.6) * 0.015;
+  m.scale.set(base.x * (1 - breathe / 2), base.y * (1 + breathe), base.z * (1 - breathe / 2));
+  m.rotation.set(knock + (down ? 0 : 0.06 * amp), twist, sw * 0.12);
+  m.position.y = down ? -knock / H * pig.back : Math.abs(sw) * 0.06;
 }
 
 /* =====================================================================
@@ -2330,6 +2530,20 @@ const CAST = [
     look: { h: 0.95, female: true, skin: SKIN[0], hair: ['bob', 0x1c1917], outfit: { type: 'cardigan', c1: 0x93c5fd, c2: 0xffffff }, pants: 0x1f2937 },
     talk: ['프린터 드라이버 깔아드릴게요', '랜선 뽑지 마세요!', '보안 교육 이수하셨어요?', '여긴 너무 추워요'],
     hit: ['꺅!', '케이블 꼬였잖아요!', '서버실에서 뭐 하세요!'] },
+  // ----- 건물 밖 -----
+  { name: '담대리', model: 'kang', variant: { hue: 30, sat: 0.5, w: 1.05 }, zone: 'smoke', role: 'staff', voice: 0.9,
+    look: { h: 0.98, skin: SKIN[1], hair: ['short', 0x1c1917], outfit: { type: 'shirt', c1: 0xe5e7eb, tie: 0x7c2d12, rolled: true }, pants: 0x374151 },
+    talk: ['딱 한 대만 피우고 들어갈게요', '금연은 내일부터...', '여기가 우리 회사 진짜 회의실이지', '부장님 오시면 신호 줘요'],
+    hit: ['콜록! 담배 떨어졌잖아요!', '이거 마지막 한 개비인데!', '흡연권 침해야!'] },
+  { name: '택배 기사님', model: 'guard', variant: { hue: 100, sat: 1.3 }, zone: 'parking', role: 'staff', voice: 0.95,
+    look: { h: 1.0, skin: SKIN[2], hair: ['buzz', 0x1c1917], outfit: { type: 'uniform', c1: 0x15803d }, pants: 0x1f2937, acc: ['cap'] },
+    talk: ['여기 사인 좀 해주세요~', '경비실에 맡겨둘게요', '오늘 300개 남았어요...', '이 회사 택배 진짜 많네'],
+    hit: ['배송 지연되면 책임지세요!', '택배 던질 거예요?!', '아이고 허리야!'] },
+  { name: '정문 경비', zone: 'gate', role: 'guard', voice: 0.72, model: 'guard', variant: { light: -0.06 }, post: [GATE_X + 1.2, MAP_Z1 - 2.2],
+    look: { h: 1.02, skin: SKIN[2], hair: ['short', 0x27272a], outfit: { type: 'uniform', c1: 0x1e3a8a }, pants: 0x1e293b, acc: ['cap'] },
+    talk: ['방문증 패용하셨어요?', '차량 등록 하셨나요?', '오늘 외제차가 한 대 들어왔어요'],
+    hit: ['어허!', '정문에서 이러시면 안 돼요!', '무전 칩니다!'],
+    nag: ['거기 서세요!', '정문 봉쇄!', '삐익-!'] },
 ];
 const PLAYER_LOOK = (female) => ({
   h: female ? 0.96 : 1.02, female, skin: SKIN[female ? 0 : 1], hair: female ? ['ponytail', 0x3b2416] : ['messy', 0x1b1b1b], topMat: playerShirt,
@@ -2408,7 +2622,7 @@ function updateFrags(dt) {
       f.m.position.y = f.h; f.vy *= -0.35;
       const k = Math.exp(-6 * dt); f.vx *= k; f.vz *= k; f.ax *= k; f.az *= k;
     }
-    f.m.position.x = clamp(f.m.position.x, -MAP_X + 0.2, MAP_X - 0.2); f.m.position.z = clamp(f.m.position.z, -13.8, 13.8);
+    f.m.position.x = clamp(f.m.position.x, -MAP_X + 0.2, MAP_X - 0.2); f.m.position.z = clamp(f.m.position.z, MAP_Z0 + 0.2, MAP_Z1 - 0.2);
     f.life -= dt;
     if (f.life < 1) f.m.scale.multiplyScalar(Math.max(0.0001, 1 - dt * 3));
     if (f.life <= 0) { scene.remove(f.m); frags.splice(i, 1); }
@@ -2817,7 +3031,10 @@ function animateHuman(c, dt, speed) {
   if (c.F.mouth.visible) c.F.mouth.scale.y = c.bubbleT > 0 && Math.sin(T * 28) > 0 ? 0.035 : 0.011;
   c.g.position.copy(c.pos);
   c.g.rotation.y = c.facing;
-  if (c.rig) updateRig(c, dt, speed);
+  // 화면 밖 멀리 있는 사람은 그리지도, 동작 계산도 안 함 (발열 줄이기)
+  const far = c !== player && Math.hypot(c.pos.x - player.pos.x, c.pos.z - player.pos.z) > cullDist;
+  c.g.visible = !far;
+  if (c.rig && !far) updateRig(c, dt, speed);
 }
 function updateKnocked(c, dt) {
   c.vel.y -= 22 * dt;
@@ -3038,9 +3255,11 @@ function updateProps(dt) {
     if (p.wobble > 0) { p.wobble = Math.max(0, p.wobble - dt * 3); p.g.rotation.z = Math.sin(T * 45) * p.wobble * 0.08; }
   }
 }
+let cullDist = 40; // 이보다 먼 사람은 화면 밖이라 안 그림 (카메라 거리에 맞춰 바뀜)
 function updateCamera(dt) {
   const aspect = innerWidth / innerHeight;
   const dist = tune.camDist * (aspect < 1 ? Math.pow(1 / aspect, 0.6) : 1);
+  cullDist = dist * 2.2 + 8;
   const a = tune.camAngle * PI / 180;
   const tx = player.pos.x, tz = player.pos.z;
   const k = 1 - Math.exp(-8 * dt);
@@ -3130,6 +3349,7 @@ function update(dt) {
 let last = performance.now();
 function loop(now) {
   requestAnimationFrame(loop);
+  if (MOBILE && now - last < 12) return; // 120Hz 폰도 초당 60번까지만 그림
   let dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (!running) return;
   if (hitstop > 0) { hitstop -= dt; dt = 0; }
@@ -3226,8 +3446,32 @@ function renderHeroSel() { for (const b of heroGrid.children) b.classList.toggle
 renderHeroSel();
 function renderDeptSel() { for (const b of deptGrid.children) b.classList.toggle('sel', b.dataset.id === selectedDept); }
 renderDeptSel();
-const inCompany = $('#inCompany');
-inCompany.value = store.get('gta_company', '');
+const inCompany = $('#inCompany'); // 회사 이름은 저장하지 않음 (켤 때마다 빈칸, 비밀 단어가 남지 않게)
+// 히든 주인공: 회사 이름에 비밀 단어를 넣어야만 돼지 선택 칸이 열림 (켤 때마다 다시 입력)
+// models/pig 파일이 있을 때만 작동 → 공개 사이트에는 파일을 안 올려서 아무 일도 안 일어남
+// 대소문자 구분 없음. 한글 자판 상태로 치면 'ㅔㅑ흐ㅐㅇㄷ'가 되니까 그것도 인정
+const PIG_CODES = ['pigmode', 'ㅔㅑ흐ㅐㅇㄷ'], PIG_COMPANY = '꿀꿀제약';
+const isPigCode = v => PIG_CODES.includes(v.trim().toLowerCase());
+function setupPig() {
+  if (!modelLib.pig) {
+    if (selectedHero === 'pig') { selectedHero = 'm'; renderHeroSel(); }
+    return;
+  }
+  const b = document.createElement('button');
+  b.className = 'dept'; b.dataset.id = 'pig'; b.textContent = '🐷 ???';
+  b.style.display = 'none';
+  b.addEventListener('click', () => { selectedHero = 'pig'; renderHeroSel(); sfx('click'); });
+  heroGrid.appendChild(b);
+  const check = () => {
+    if (!isPigCode(inCompany.value) || b.style.display !== 'none') return;
+    b.style.display = '';
+    selectedHero = 'pig'; renderHeroSel(); sfx('boing');
+  };
+  inCompany.addEventListener('input', check);
+  inCompany.addEventListener('compositionend', check); // 한글 마지막 글자 조합이 끝날 때
+  if (selectedHero === 'pig') selectedHero = 'm';
+  renderHeroSel();
+}
 
 const nextFrame = () => new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
 const posterURL = 'assets/poster2.png';
@@ -3236,6 +3480,7 @@ async function boot() {
   buildWorld(); buildNav();
   setLoad(45); await nextFrame();
   await loadModels().catch(err => console.warn('3D 모델 불러오기 실패, 도형 캐릭터 사용:', err));
+  setupPig();
   setLoad(60); await nextFrame();
   for (const def of CAST) spawnNPC(def);
   setLoad(75); await nextFrame();
@@ -3251,8 +3496,7 @@ boot().catch(err => { console.error(err); $('#loadErr').textContent = '로딩 �
 
 $('#btnStart').addEventListener('click', async () => {
   audioInit(); sfx('click');
-  state.company = inCompany.value.trim() || '(주)한숨제약';
-  store.set('gta_company', inCompany.value.trim());
+  state.company = isPigCode(inCompany.value) ? PIG_COMPANY : inCompany.value.trim() || '(주)한숨제약'; // 비밀 단어로 들어오면 간판이 꿀꿀제약
   store.set('gta_dept', selectedDept);
   store.set('gta_hero', selectedHero);
   // 로딩 화면 (포스터 배경 + 팁)
@@ -3268,7 +3512,10 @@ $('#btnStart').addEventListener('click', async () => {
   }
   const [sx, sz, sf] = SPAWNS[selectedDept] || SPAWNS.qc;
   player = makeChar(PLAYER_LOOK(selectedHero === 'f'), { name: '나', state: 'normal' });
-  try { attachModel(player, selectedHero === 'f' ? 'hero_f' : 'hero_m'); }
+  try {
+    if (selectedHero === 'pig' && modelLib.pig) attachModel(player, 'pig', { h: 0.7 });
+    else attachModel(player, selectedHero === 'f' ? 'hero_f' : 'hero_m');
+  }
   catch (err) { console.warn('주인공 3D 모델 실패, 도형 캐릭터 사용:', err); player.body.visible = true; player.rig = null; }
   player.pos.set(sx, 0, sz); player.facing = player.faceTo = sf;
   camera.position.set(sx, 14, sz + 10);
