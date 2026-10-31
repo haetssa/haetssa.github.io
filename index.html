@@ -213,7 +213,8 @@
   #loading > * { position: relative; }
   #loadLogo { font-family: var(--title); font-size: 34px; line-height: .95; text-align: center; -webkit-text-stroke: 1.5px #000; margin-bottom: 18px; }
   #loadTip { max-width: 520px; text-align: center; font-size: 14px; color: #e5e7eb; min-height: 40px; word-break: keep-all; }
-  #loadBar { width: min(320px, 80vw); height: 4px; background: rgba(255,255,255,.2); border-radius: 2px; overflow: hidden; margin-top: 14px; }
+  #loadBar { width: min(320px, 80vw); height: 6px; background: rgba(255,255,255,.2); border-radius: 3px; overflow: hidden; margin-top: 14px; }
+  #loadInfo { white-space: pre-line; margin-top: 8px; font-size: 12px; color: #cbd5e1; text-align: center; font-variant-numeric: tabular-nums; min-height: 32px; word-break: keep-all; }
   #loadBar i { display: block; height: 100%; width: 0; background: var(--accent2); transition: width .3s; }
   #loadErr { color: var(--accent); font-size: 13px; margin-top: 10px; text-align: center; }
 
@@ -343,6 +344,7 @@
   <div id="loadLogo">grand<br>taesa<br>action</div>
   <div id="loadTip">출근 준비 중...</div>
   <div id="loadBar"><i></i></div>
+  <div id="loadInfo">게임 엔진 불러오는 중...</div>
   <div id="loadErr"></div>
 </div>
 
@@ -390,6 +392,7 @@ let devMode = store.get('gta_dev', false) || new URLSearchParams(location.search
 // 치트 (개발자 모드에서만 켤 수 있음)
 const cheat = { noWanted: false, god: false, onePunch: false };
 const setLoad = (pct, msg) => { $('#loadBar i').style.width = pct + '%'; if (msg) $('#loadTip').textContent = msg; };
+const setLoadInfo = text => { $('#loadInfo').textContent = text; };
 
 /* =====================================================================
    2. 사운드 — 효과음·환경음은 WebAudio로 합성, 배경음악은 assets/bgm.mp3
@@ -2263,25 +2266,36 @@ const ANIM_NAMES = ['idle', 'walk', 'run', 'yell', 'fall', 'getup', 'punch', 'hi
 const modelLib = {}, clipLib = {};
 
 const PACKED = false; // 배포용 사본에서만 true
+// 로딩 진행률: 파일마다 (받은 비율 × 무게)를 합침. 무게 = 대략적인 파일 크기 (캐릭터 4, 동작 1, 텍스처 0.1)
+const loadProg = { items: [], bytes: 0 };
+function trackFile(w) { const it = { w, f: 0, got: 0 }; loadProg.items.push(it); return it; }
+function loadFrac() {
+  let W = 0, D = 0;
+  for (const it of loadProg.items) { W += it.w; D += it.w * it.f; }
+  return W ? D / W : 0;
+}
+const loadBytes = () => loadProg.items.reduce((a, it) => a + it.got, 0);
 async function loadModels() {
   if (location.protocol === 'file:') return; // 더블클릭 실행은 브라우저가 파일 읽기를 막음
   const loader = new FBXLoader(), texLoader = new THREE.TextureLoader();
   // 배포본(Claude Artifact)은 fbx를 못 올려서 base64 텍스트(<파일>.fbx.txt)로 올리고 여기서 다시 풀어 씀
-  const tryLoad = url => (PACKED
+  const tryLoad = (url, it) => (PACKED
     ? fetch(url + '.txt').then(r => { if (!r.ok) throw r.status; return r.text(); })
         .then(t => { const b = atob(t), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return loader.parse(u.buffer, ''); })
-    : loader.loadAsync(url)).catch(() => null);
-  await Promise.all(ANIM_NAMES.map(async name => {
-    const o = await tryLoad(`models/anims/${name}.fbx`);
+    : loader.loadAsync(url, e => { it.got = e.loaded; if (e.lengthComputable) it.f = 0.95 * e.loaded / e.total; }))
+    .catch(() => null).finally(() => { it.f = 1; });
+  const anims = Promise.all(ANIM_NAMES.map(async name => {
+    const o = await tryLoad(`models/anims/${name}.fbx`, trackFile(1));
     if (o && o.animations[0]) clipLib[name] = prepClip(o.animations[0], name);
   }));
+  const models = Object.entries(MODELS).map(([key, m]) => {
+    const fi = trackFile(4), ti = trackFile(0.1);
+    return Promise.all([tryLoad(m.fbx, fi), texLoader.loadAsync(m.tex).catch(() => null).finally(() => { ti.f = 1; })]);
+  });
+  await anims;
   if (!clipLib.idle) return;
-  await Promise.all(Object.entries(MODELS).map(async ([key, m]) => {
-    const o = await tryLoad(m.fbx);
-    if (!o) return;
-    const tex = await texLoader.loadAsync(m.tex).catch(() => null);
-    modelLib[key] = prepModel(o, tex);
-  }));
+  const keys = Object.keys(MODELS), got = await Promise.all(models);
+  got.forEach(([o, tex], i) => { if (o) modelLib[keys[i]] = prepModel(o, tex); });
   makePunchClips();
   makeWorkClip();
 }
@@ -4298,16 +4312,27 @@ function setupPig() {
 
 const nextFrame = () => new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
 const posterURL = 'assets/poster2.png';
+// 로딩 단계: 회사 짓기 0~8% → 3D 캐릭터·동작 받기 8~88% (파일 받은 만큼) → 직원 배치 88~100%
 async function boot() {
-  setLoad(10, pick(TIPS)); await nextFrame();
+  setLoad(3, pick(TIPS)); setLoadInfo('회사 건물 짓는 중...'); await nextFrame();
   buildWorld(); buildNav();
-  setLoad(45); await nextFrame();
+  setLoad(8); setLoadInfo('3D 캐릭터·동작 받는 중... 0%'); await nextFrame();
+  const t0 = performance.now();
+  const tick = setInterval(() => {
+    const f = loadFrac(), mb = loadBytes() / 1048576, slow = performance.now() - t0 > 8000;
+    setLoad(8 + 80 * f);
+    setLoadInfo(`3D 캐릭터·동작 받는 중... ${Math.round(f * 100)}%${mb > 0.1 ? ` (${mb.toFixed(1)}MB)` : ''}`
+      + (slow ? '\n처음 접속은 1~2분 걸릴 수 있어요. 다음부터는 금방 열려요!' : ''));
+  }, 150);
   await loadModels().catch(err => console.warn('3D 모델 불러오기 실패, 도형 캐릭터 사용:', err));
+  clearInterval(tick);
   setupPig();
-  setLoad(60); await nextFrame();
-  for (const def of CAST) spawnNPC(def);
-  setLoad(75); await nextFrame();
-  setLoad(100); await nextFrame();
+  setLoad(88); setLoadInfo('직원들 출근 중...'); await nextFrame();
+  for (let i = 0; i < CAST.length; i++) { // 한 명씩 만들면서 막대도 조금씩
+    spawnNPC(CAST[i]);
+    if (i % 3 === 2 || i === CAST.length - 1) { setLoad(88 + 12 * (i + 1) / CAST.length); setLoadInfo(`직원들 출근 중... (${i + 1}/${CAST.length}명)`); await nextFrame(); }
+  }
+  setLoad(100); setLoadInfo('준비 완료!'); await nextFrame();
   $('#loading').classList.add('hidden');
   $('#title').classList.remove('hidden');
   if (location.protocol === 'file:') $('#fileWarn').style.display = 'block';
@@ -4327,7 +4352,7 @@ $('#btnStart').addEventListener('click', async () => {
   const ld = $('#loading'); ld.classList.remove('hidden');
   ld.style.backgroundImage = posterURL ? `url(${posterURL})` : '';
   $('#loadLogo').style.display = 'none';
-  setLoad(30, pick(TIPS)); await nextFrame();
+  setLoad(30, pick(TIPS)); setLoadInfo('출근하는 중...'); await nextFrame();
   // 간판/로고에 회사명 반영
   for (const sg of signs) {
     const tex = sg.kind === 'logo' ? logoTex(state.company) : signTex(state.company, sg.zone);
