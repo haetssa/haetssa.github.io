@@ -51,11 +51,28 @@
 
   /* ---------- HUD ---------- */
   #hud { position: fixed; inset: 0; z-index: 2; pointer-events: none; }
-  #info {
+  #leftCol {
     position: absolute; left: calc(10px + env(safe-area-inset-left)); top: calc(10px + env(safe-area-inset-top));
-    background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 6px 9px;
-    font-size: 12px; width: 180px; backdrop-filter: blur(6px);
+    width: 180px; display: flex; flex-direction: column; gap: 6px;
   }
+  #info {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 6px 9px;
+    font-size: 12px; backdrop-filter: blur(6px);
+  }
+  /* 할 일 (이벤트·심부름) */
+  #quest {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 5px 9px;
+    font-size: 12px; line-height: 1.4; backdrop-filter: blur(6px); word-break: keep-all;
+  }
+  #quest:empty { display: none; }
+  #quest div + div { margin-top: 3px; }
+  #quest .ev { color: #fca5a5; font-weight: 700; }
+  #quest .dim { color: var(--muted); font-size: 11px; }
+  #qmark {
+    position: absolute; left: 0; top: 0; display: none; font-size: 28px; font-weight: 900; color: #facc15;
+    text-shadow: 0 0 3px #000, 0 2px 0 #000; animation: bob .8s ease-in-out infinite alternate;
+  }
+  @keyframes bob { from { margin-top: 0; } to { margin-top: -8px; } }
   #company { font-family: var(--kor); font-size: 14px; letter-spacing: .3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #where { color: var(--muted); margin-bottom: 3px; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .row { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
@@ -63,7 +80,9 @@
   .bar { flex: 1; height: 7px; border-radius: 4px; background: rgba(255,255,255,.12); overflow: hidden; min-width: 0; }
   .row.money { justify-content: space-between; flex-wrap: wrap; column-gap: 8px; row-gap: 0; }
   @media (max-height: 500px) { /* 가로로 눕힌 휴대폰 */
-    #info { font-size: 11px; width: 158px; padding: 5px 8px; }
+    #leftCol { width: 158px; }
+    #info { font-size: 11px; padding: 5px 8px; }
+    #quest { font-size: 11px; padding: 4px 8px; }
     #company { font-size: 13px; }
   }
   #stressFill { height: 100%; width: 50%; background: #ffd166; transition: width .15s; }
@@ -75,6 +94,17 @@
     text-shadow: 0 0 2px #000, 0 2px 0 #000;
   }
   #stars b { color: #fff; font-weight: 400; }
+  /* 미니맵: 별 아래. 누르면 화면 가운데에 크게 */
+  #minimap {
+    position: absolute; right: calc(12px + env(safe-area-inset-right)); top: calc(106px + env(safe-area-inset-top));
+    width: 240px; height: 90px; border-radius: 8px; border: 1px solid var(--line); background: rgba(16,19,27,.75);
+    pointer-events: auto; cursor: pointer; touch-action: none;
+  }
+  @media (max-height: 500px), (max-width: 700px) { #minimap { width: 168px; height: 63px; top: calc(100px + env(safe-area-inset-top)); } }
+  #minimap.big {
+    right: 50%; top: 50%; transform: translate(50%, -50%); width: min(94vw, 960px, 230vh); height: auto; z-index: 6;
+    border-radius: 12px; box-shadow: 0 0 0 100vmax rgba(0,0,0,.55);
+  }
   #stars.flash b { animation: flash .25s 6 alternate; }
   @keyframes flash { from { color: #fff; } to { color: #ff4d4d; } }
   .icon {
@@ -113,9 +143,10 @@
   #banner {
     position: absolute; left: 50%; top: 22%; transform: translate(-50%, -50%); padding: 12px 20px; border-radius: 14px;
     background: var(--panel); border: 1px solid var(--line); font-size: 21px; font-weight: 800; text-align: center;
-    opacity: 0; transition: opacity .3s; max-width: 90vw; word-break: keep-all;
+    opacity: 0; transition: opacity .3s; max-width: 90vw; word-break: keep-all; white-space: pre-line;
   }
   #banner.show { opacity: 1; }
+  #banner.alert { background: rgba(185, 28, 28, .92); border-color: #fca5a5; font-size: 26px; }
   #hint {
     position: absolute; left: 50%; bottom: calc(130px + env(safe-area-inset-bottom)); transform: translateX(-50%);
     background: var(--panel); border-radius: 10px; padding: 9px 16px; font-size: 14px; color: var(--muted);
@@ -236,6 +267,7 @@
 <div id="bubbles"></div>
 
 <div id="hud" class="hidden">
+  <div id="leftCol">
   <div id="info">
     <div id="company"></div>
     <div id="where"></div>
@@ -243,11 +275,15 @@
     <div class="row"><span class="lbl">스트레스</span><div class="bar"><div id="stressFill"></div></div><span id="stressNum"></span></div>
     <div class="row money"><span><span class="lbl">피해액</span> <span id="damage">0원</span></span><span><span class="lbl">업무</span> <span id="works">0건</span></span></div>
   </div>
+  <div id="quest"></div>
+  </div>
+  <div id="qmark">❗</div>
   <div id="topBtns">
     <button id="btnMute" class="icon" title="소리">🔊</button>
     <button id="btnTune" class="icon" title="조절 패널">⚙️</button>
   </div>
   <div id="stars"></div>
+  <canvas id="minimap" width="1024" height="384" title="지도 (M)"></canvas>
   <div id="devBadge">DEV</div>
   <div id="actBtns">
     <button id="btnTalk" class="act small">💬<small>대화·업무</small></button>
@@ -261,7 +297,7 @@
   <div id="wasted"><h2></h2><p></p></div>
   <div id="dead"><h2>WASTED</h2><p>과로와 폭행으로 쓰러졌습니다...</p>
     <div class="btns"><button id="btnRespawn">다시 출근하기 (이어서)</button><button id="btnRestart">처음부터</button></div></div>
-  <div id="hint">화면 왼쪽 드래그: 이동 · 화면 오른쪽 탭/👊: 펀치 · 💬: 대화/업무<br>PC: WASD·방향키 이동 · Space 펀치 · E 대화/업무</div>
+  <div id="hint">화면 왼쪽 드래그: 이동 · 화면 오른쪽 탭/👊: 펀치 · 💬: 대화/업무/차 타기<br>PC: WASD·방향키 이동 · Space 펀치 · E 대화/업무/차 타기</div>
 </div>
 
 <div id="tune" class="hidden">
@@ -333,9 +369,9 @@ const pick = a => a[Math.floor(Math.random() * a.length)];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const lerp = (a, b, t) => a + (b - a) * t;
 const H = Math.PI / 2, PI = Math.PI;
+const angDiff = (a, b) => ((a - b + PI) % (PI * 2) + PI * 2) % (PI * 2) - PI; // a - b 를 -PI~PI로
 function angLerp(a, b, t) {
-  const d = ((b - a + PI) % (PI * 2) + PI * 2) % (PI * 2) - PI;
-  return a + d * t;
+  return a + angDiff(b, a) * t;
 }
 function fmtWon(n) {
   if (n >= 1e8) return (n / 1e8).toFixed(1).replace(/\.0$/, '') + '억원';
@@ -462,9 +498,35 @@ function sfx(kind, p = 1) {
       case 'whistle': for (let i = 0; i < 6; i++) osc('sine', 2300, 2500, 0.06, 0.12, i * 0.07); break;
       case 'slurp': nz(0.5, 0.15, 'bandpass', 500, 0, sfxBus, 3, 1500); break;
       case 'click': osc('sine', 900, 900, 0.05, 0.1); break;
+      case 'door': osc('sine', 150, 70, 0.12, 0.35); nz(0.08, 0.25, 'lowpass', 900); break;
+      case 'horn': for (const t of [0, 0.24]) for (const f of [370, 466]) osc('square', f, f, 0.18, 0.06, t, sfxBus, ['lowpass', 1600]); break;
+      case 'beep': for (const t of [0, 0.3]) osc('square', 1150, 1150, 0.15, 0.05, t, sfxBus, ['lowpass', 2500]); break;
+      case 'screech': nz(0.45, 0.14, 'bandpass', 2600, 0, sfxBus, 8, 1700); break;
+      case 'ring': for (let k = 0; k < 2; k++) for (let i = 0; i < 8; i++) { osc('sine', 440, 440, 0.05, 0.07, k * 0.6 + i * 0.05); osc('sine', 480, 480, 0.05, 0.07, k * 0.6 + i * 0.05); } break;
+      case 'bell': for (let i = 0; i < 14; i++) osc('square', 950, 950, 0.04, 0.05, i * 0.06, sfxBus, ['lowpass', 2500]); break;
       default: crashSound(kind);
     }
   } catch (e) {}
+}
+// 탈것 엔진 소리: 타 있는 동안 계속 웅웅, 빠를수록 높게
+let engine = null;
+function engineStart() {
+  if (!snd.ctx || engine) return;
+  const ctx = snd.ctx, o = ctx.createOscillator(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+  o.type = 'sawtooth'; o.frequency.value = 38; f.type = 'lowpass'; f.frequency.value = 260; g.gain.value = 0;
+  o.connect(f).connect(g).connect(sfxBus); o.start();
+  g.gain.setTargetAtTime(0.07, ctx.currentTime, 0.1);
+  engine = { o, f, g };
+}
+function engineTick(k) { // k: 0(정지) ~ 1(최고 속도)
+  if (!engine) return;
+  const t = snd.ctx.currentTime;
+  engine.o.frequency.setTargetAtTime(38 + k * 75, t, 0.1); engine.f.frequency.setTargetAtTime(260 + k * 700, t, 0.1);
+}
+function engineStop() {
+  if (!engine) return;
+  const e = engine, t = snd.ctx.currentTime; engine = null;
+  e.g.gain.setTargetAtTime(0, t, 0.08); e.o.stop(t + 0.5);
 }
 function scheduleAmbient() {
   setTimeout(() => { if (running && snd.ctx && !muted) ambientEvent(); scheduleAmbient(); }, rand(2500, 7000));
@@ -486,13 +548,26 @@ function ambientEvent() {
     for (let i = 0; i < 6; i++) grunt(rand(0.8, 1.6), 0.025, i * rand(0.12, 0.22), B, 0.14);
   }
 }
-// 배경음악: assets/bgm.mp3 반복 재생. 인사팀 추격(★3 이상)이면 살짝 빠르게
-const bgm = new Audio('assets/bgm.mp3');
-bgm.loop = true; bgm.preload = 'auto';
+// 배경음악: 타이틀·로딩은 bgm, 출근하면 평소엔 office_bgm(원곡 1시간 중 앞 5분만 잘라 반복),
+// ★3 이상이거나 이벤트(식약처 실사 등) 중엔 긴박한 ingame_bgm. 끝나면 office_bgm을 멈췄던 곳부터 이어서
+const bgm = new Audio('assets/bgm.mp3'), officeBgm = new Audio('assets/office_bgm.mp3'), tenseBgm = new Audio('assets/ingame_bgm.mp3');
+const TRACKS = [bgm, officeBgm, tenseBgm];
+// 곡마다 기본 크기 (조절 패널 음악 슬라이더가 기본값 40%일 때 기준, 슬라이더를 올리고 내리면 같은 비율로 바뀜)
+const TRACK_VOL = new Map([[bgm, 0.4], [officeBgm, 0.3], [tenseBgm, 0.15]]);
+const TENSE_START = 21; // ingame_bgm 앞 21초는 전주라서 건너뜀 (시작할 때·반복할 때 모두)
+for (const a of TRACKS) { a.loop = a !== tenseBgm; a.preload = 'auto'; }
+tenseBgm.addEventListener('ended', () => { tenseBgm.currentTime = TENSE_START; tenseBgm.play().catch(() => {}); });
+let musicCur = null;
 function musicTick() {
-  bgm.volume = muted ? 0 : clamp(tune.music, 0, 1);
-  bgm.playbackRate = snd.intensity > 0 ? 1.1 : 1;
-  if (bgm.paused && !muted && tune.music > 0) bgm.play().catch(() => {});
+  const cur = !running ? bgm : snd.intensity > 0 ? tenseBgm : officeBgm;
+  for (const a of TRACKS) if (a !== cur && !a.paused) a.pause();
+  if (cur !== musicCur) { musicCur = cur; if (cur === tenseBgm) try { tenseBgm.currentTime = TENSE_START; } catch (e) {} } // 긴박한 상황마다 본론부터
+  if (cur === tenseBgm && cur.currentTime < TENSE_START - 0.5 && cur.readyState >= 1) cur.currentTime = TENSE_START;
+  // office_bgm은 중간을 잘라서 끝→처음이 끊기니까 끝 2.5초는 줄이고 처음 1.5초는 키움
+  const t = cur.currentTime, d = cur.duration;
+  const fade = cur === officeBgm && d > 10 ? clamp((d - t) / 2.5, 0, 1) * clamp(t / 1.5, 0, 1) : 1;
+  cur.volume = muted ? 0 : clamp(tune.music / DEFAULT_TUNE.music * TRACK_VOL.get(cur), 0, 1) * fade;
+  if (cur.paused && !muted && tune.music > 0) cur.play().catch(() => {});
 }
 addEventListener('pointerdown', audioInit, { once: false, passive: true });
 
@@ -818,6 +893,10 @@ const WORK = {
   massage: { label: '안마 받는 중',  dur: 3,   stress: -9, msg: ['어깨가 풀렸다~', '잠들 뻔했다'] },
   pong:   { label: '탁구 치는 중',   dur: 2.4, stress: -5, msg: ['스매시!', '공 잃어버렸다'] },
 };
+// 업무할 때 주인공 동작: 마실 것은 마시기, 통화는 통화, 안마의자는 앉기(sit 동작이 있을 때), 나머지는 손을 앞에서 바쁘게 (work)
+const WORK_POSE = { coffee: 'drink', vend: 'drink', call: 'phone', massage: 'sit' };
+for (const [k, w] of Object.entries(WORK)) w.pose = WORK_POSE[k] || 'work';
+WORK.massage.seat = true;
 function monitor(g, x, z, y = 0.76, s = 1) {
   B(g, 0.2 * s, 0.015, 0.15 * s, 0x2a2a2a, x, y + 0.008, z);
   B(g, 0.03, 0.2 * s, 0.03, 0x2a2a2a, x, y + 0.1 * s, z - 0.02);
@@ -1290,6 +1369,19 @@ const PROPS = {
     C(g, 0.28, 0.28, 0.9, c, 0, 0.45, 0); C(g, 0.29, 0.29, 0.04, c, 0, 0.3, 0); C(g, 0.29, 0.29, 0.04, c, 0, 0.65, 0);
     C(g, 0.06, 0.06, 0.03, 0xf8fafc, 0.12, 0.91, 0); B(g, 0.25, 0.18, 0.005, 0xffffff, 0, 0.5, 0.28);
   }},
+  // 앞 = +z (포크 쪽). fork: 👊로 앞에 있는 물건 들기/내려놓기
+  forklift: { name: '지게차', w: 1.2, d: 2.6, hp: 8, value: 35000000, mass: 20, snd: 'metal', ride: { max: 4.5, acc: 3.5, turn: 2.6, fork: true }, build(g) {
+    R(g, 1.1, 0.6, 1.5, 0.08, 0xfacc15, 0, 0.5, -0.15);
+    R(g, 1.1, 0.5, 0.45, 0.06, 0x374151, 0, 0.75, -1.05); // 균형추
+    B(g, 0.45, 0.12, 0.4, 0x111827, 0, 0.86, -0.15); B(g, 0.45, 0.4, 0.08, 0x111827, 0, 1.05, -0.36); // 좌석
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) B(g, 0.05, 1.2, 0.05, 0x1f2937, sx * 0.5, 1.4, -0.2 + sz * 0.55);
+    B(g, 1.05, 0.05, 1.15, 0x1f2937, 0, 2.0, -0.2); // 머리 보호대
+    for (const sx of [-1, 1]) B(g, 0.08, 2.1, 0.08, 0x4b5563, sx * 0.35, 1.05, 0.65, METAL); // 마스트
+    B(g, 0.78, 0.06, 0.06, 0x4b5563, 0, 2.05, 0.65, METAL); B(g, 0.8, 0.3, 0.05, 0x4b5563, 0, 0.3, 0.7, METAL);
+    for (const sx of [-1, 1]) B(g, 0.1, 0.05, 0.7, 0x6b7280, sx * 0.25, 0.1, 0.98, METAL); // 포크
+    for (const sx of [-1, 1]) for (const sz of [-0.75, 0.35]) C(g, 0.22, 0.22, 0.18, 0x111827, sx * 0.55, 0.22, sz).rotation.z = H;
+    B(g, 0.12, 0.1, 0.12, 0xf97316, 0, 2.08, -0.6, { e: 0xf97316, ei: 1 }); // 경광등
+  }},
   pallet: { name: '팔레트 박스', w: 1.2, d: 1, hp: 3, value: 800000, mass: 5, snd: 'wood', build(g) {
     B(g, 1.2, 0.14, 1.0, 0xa16207, 0, 0.07, 0);
     for (let i = 0; i < 4; i++) B(g, 0.55, 0.4, 0.45, 0xc8a165, (i % 2 ? 0.29 : -0.29), 0.34, (i < 2 ? -0.24 : 0.24));
@@ -1380,13 +1472,14 @@ const PROPS = {
     B(g, 0.35, 0.03, 0.35, 0xf97316, 0, 0.015, 0); C(g, 0.03, 0.14, 0.55, 0xf97316, 0, 0.3, 0); C(g, 0.08, 0.1, 0.08, 0xffffff, 0, 0.3, 0);
   }},
   // ===== 건물 밖 (hp/mass Infinity = 부서지지도 밀리지도 않음) =====
-  car: { name: '직원 승용차', w: 1.9, d: 4.2, hp: 10, value: 28000000, mass: 30, snd: 'metal', breakText: '🚨 삐뽀삐뽀 (차량 경보)', build(g, opt = {}) {
+  // ride: 탈 수 있는 것 (max 최고 속도 m/s, acc 가속, turn 회전 속도, warn 몰래 타면 오르는 수배)
+  car: { name: '직원 승용차', w: 1.9, d: 4.2, hp: 10, value: 28000000, mass: 30, snd: 'metal', breakText: '🚨 삐뽀삐뽀 (차량 경보)', ride: { max: 12, acc: 7, turn: 2.2, warn: 0.3 }, build(g, opt = {}) {
     carBody(g, opt.color ?? pick([0xf8fafc, 0x1f2937, 0x9ca3af, 0x991b1b, 0x1e3a8a, 0xd6d3d1, 0xf8fafc]));
   }},
-  ceo_car: { name: '대표님 외제차', w: 2, d: 4.6, hp: 14, value: 250000000, mass: 40, snd: 'metal', breakText: '🚨 대표님 차가!!!', build(g) {
+  ceo_car: { name: '대표님 외제차', w: 2, d: 4.6, hp: 14, value: 250000000, mass: 40, snd: 'metal', breakText: '🚨 대표님 차가!!!', ride: { max: 15, acc: 9, turn: 2.2, warn: 1, msg: '🚨 대표님 차를 몰래 탔습니다!' }, build(g) {
     carBody(g, 0x0b0b0f, 1.1, true);
   }},
-  truck: { name: '택배 트럭', w: 2.2, d: 5.2, hp: 12, value: 45000000, mass: 45, snd: 'metal', breakText: '📦 택배 대방출!', build(g) {
+  truck: { name: '택배 트럭', w: 2.2, d: 5.2, hp: 12, value: 45000000, mass: 45, snd: 'metal', breakText: '📦 택배 대방출!', ride: { max: 9, acc: 4.5, turn: 1.8, warn: 0.5 }, build(g) {
     R(g, 2.1, 1.3, 1.5, 0.15, 0xf8fafc, 0, 0.95, 1.8, GLOSS); // 운전석 (앞 = +z)
     B(g, 1.8, 0.5, 0.05, 0x1e293b, 0, 1.3, 2.56, GLOSS);
     R(g, 2.2, 2.2, 3.6, 0.08, 0xfacc15, 0, 1.45, -0.8);
@@ -1423,6 +1516,14 @@ const PROPS = {
   flag: { name: '게양대', w: 0.3, d: 0.3, hp: Infinity, value: 500000, mass: Infinity, snd: 'metal', build(g, opt = {}) {
     C(g, 0.04, 0.05, 5, 0xd1d5db, 0, 2.5, 0, METAL); S(g, 0.07, 0xd4a017, 0, 5.05, 0);
     B(g, 0.9, 0.6, 0.02, opt.color ?? 0xffffff, 0.47, 4.6, 0);
+  }},
+  // use: 💬로 쓰는 물건 (USE 표 참고)
+  report_phone: { name: '복도 공중전화', w: 0.5, d: 0.35, hp: Infinity, value: 300000, mass: Infinity, snd: 'metal', use: 'report', build(g) {
+    C(g, 0.04, 0.05, 1.0, 0x6b7280, 0, 0.5, -0.05, METAL);
+    R(g, 0.42, 0.6, 0.22, 0.04, 0x1e40af, 0, 1.25, 0);
+    B(g, 0.08, 0.34, 0.08, 0x111827, -0.13, 1.3, 0.13); // 수화기
+    B(g, 0.16, 0.2, 0.01, 0xd1d5db, 0.06, 1.2, 0.115, METAL);
+    B(g, 0.44, 0.12, 0.03, 0xfacc15, 0, 1.63, 0.02, { e: 0xfacc15, ei: 0.6 });
   }},
   locked_door: { name: '잠긴 문', w: 1.4, d: 0.3, hp: Infinity, value: 0, mass: Infinity, snd: 'wood', fixed: true, build(g, opt = {}) {
     R(g, 1.3, 2.1, 0.1, 0.02, 0x7a5233, 0, 1.05, 0);
@@ -1535,7 +1636,7 @@ const LAYOUT = [
   // ---- 생산동: 클린룸 ----
   ['tablet_press', -53.6, -12.9], ['tablet_press', -50.6, -12.9], ['coater', -47.2, -12.7], ['blister', -42.3, -13.35],
   ['drum', -55.3, -6.8], ['drum', -54.6, -6.8, 0, { color: 0x1e40af }], ['drum', -55.3, -6.1], ['drum', -54.6, -6.1, 0, { color: 0x15803d }],
-  ['pallet', -62.8, -6.8], ['pallet', -62.8, -4.4], ['pallet', -61.2, -5.6, H],
+  ['pallet', -62.8, -6.8], ['pallet', -62.8, -4.4], ['pallet', -61.2, -5.6, H], ['forklift', -58.3, -5.5, -H],
   ['lab_bench', -47, -8.2], ['stool', -47, -7.25], ['tablet_tester', -42.4, -8.3, -H], ['lab_cart', -50, -6.4],
   ['drum', -41, -4.4, 0, { color: 0x6b7280 }], ['drum', -41.7, -4.4, 0, { color: 0x6b7280 }], ['fire_ext', -56.4, -2.5], ['trash', -40.6, -2.6],
   // ---- 분석센터 ----
@@ -1548,7 +1649,7 @@ const LAYOUT = [
   ['bookshelf', 63.6, -7.0, -H], ['cabinet', 63.55, -4.6, -H], ['plant_big', 40.7, -2.6], ['gas_cyl', 59.2, -8.9, 0, { color: 0x9ca3af }], ['gas_cyl', 58.8, -8.9, 0, { color: 0x166534 }],
   // ---- 복도 확장 ----
   ['fire_ext', -48, -1.75], ['fire_ext', 52, 1.75], ['water_cooler', 44, -1.7], ['trash', -58, 1.7], ['plant_small', -63.5, 0], ['plant_small', 63.5, 0],
-  ['fan', 61, -1.6],
+  ['fan', 61, -1.6], ['report_phone', -63.7, -1.3, H],
   // ---- 휴게실 ----
   ['pingpong', -58, 8.5], ['massage', -47.5, 13.1, PI], ['massage', -46.3, 13.1, PI, { color: 0x1e3a8a }], ['massage', -45.1, 13.1, PI],
   ['arcade', -63.5, 10.5, H], ['arcade', -63.5, 11.5, H, { color: 0xdc2626 }], ['arcade', -63.5, 12.5, H, { color: 0x0891b2 }],
@@ -1741,12 +1842,22 @@ function addProp(type, x, z, rot, opt) {
   g.position.set(x, 0, z); g.rotation.y = rot;
   scene.add(g);
   const swap = Math.abs(Math.sin(rot)) > 0.5;
-  const p = { type, def, g, x, z, vx: 0, vz: 0, hp: def.hp, alive: true, parts, opt,
+  const p = { type, def, g, x, z, rot, vx: 0, vz: 0, hp: def.hp, alive: true, parts, opt,
     hw: (swap ? def.d : def.w) / 2, hd: (swap ? def.w : def.d) / 2, wobble: 0, hitCD: 0 };
+  if (def.ride) { p.lw = def.w / 2; p.ld = def.d / 2; p.speed = 0; }
   props.push(p);
   return p;
 }
 const propBox = p => ({ x0: p.x - p.hw, x1: p.x + p.hw, z0: p.z - p.hd, z1: p.z + p.hd });
+// 탈것은 아무 방향으로나 서 있을 수 있어서 자기 방향 기준 상자로 충돌 (앞 = (sin rot, cos rot))
+// hw/hd는 돌아간 상자를 감싸는 큰 상자 (길 찾기·기물끼리 밀기용)
+function setVehAABB(p) {
+  const c = Math.abs(Math.cos(p.rot)), s = Math.abs(Math.sin(p.rot));
+  p.hw = c * p.lw + s * p.ld; p.hd = s * p.lw + c * p.ld;
+}
+const toLocal = (p, x, z) => { const dx = x - p.x, dz = z - p.z, c = Math.cos(p.rot), s = Math.sin(p.rot); return { x: dx * c - dz * s, z: dx * s + dz * c }; };
+const toWorld = (p, lx, lz) => { const c = Math.cos(p.rot), s = Math.sin(p.rot); return { x: p.x + lx * c + lz * s, z: p.z - lx * s + lz * c }; };
+const vehBox = p => ({ x0: -p.lw, x1: p.lw, z0: -p.ld, z1: p.ld });
 
 /* =====================================================================
    8. 충돌
@@ -1777,6 +1888,20 @@ function distToBox(pos, b) {
   const cx = clamp(pos.x, b.x0, b.x1), cz = clamp(pos.z, b.z0, b.z1);
   return { d: Math.hypot(pos.x - cx, pos.z - cz), cx, cz };
 }
+// 기물 상자에서 원(사람·로켓)을 밀어냄. 탈것이면 돌아간 상자 기준
+function pushOutProp(pos, r, p) {
+  if (!p.def.ride) return pushOutCircle(pos, r, propBox(p));
+  const l = toLocal(p, pos.x, pos.z), n = pushOutCircle(l, r, vehBox(p));
+  if (!n) return null;
+  const w = toWorld(p, l.x, l.z); pos.x = w.x; pos.z = w.z;
+  const c = Math.cos(p.rot), s = Math.sin(p.rot);
+  return { nx: n.nx * c + n.nz * s, nz: -n.nx * s + n.nz * c };
+}
+function distToProp(pos, p) {
+  if (!p.def.ride) return distToBox(pos, propBox(p));
+  const r = distToBox(toLocal(p, pos.x, pos.z), vehBox(p)), w = toWorld(p, r.cx, r.cz);
+  return { d: r.d, cx: w.x, cz: w.z };
+}
 function bounce(v, n, e) {
   const dot = v.x * n.nx + v.z * n.nz;
   if (dot < 0) { v.x -= (1 + e) * dot * n.nx; v.z -= (1 + e) * dot * n.nz; }
@@ -1784,8 +1909,8 @@ function bounce(v, n, e) {
 function resolveChar(c, flying) {
   for (const w of walls) { const n = pushOutCircle(c.pos, c.r, w); if (n && flying) bounce(c.vel, n, 0.4); }
   for (const p of props) {
-    if (!p.alive) continue;
-    const n = pushOutCircle(c.pos, c.r, propBox(p));
+    if (!p.alive || (flying && p === player.veh)) continue; // 차에 치여 날아가는 사람은 그 차를 통과
+    const n = pushOutProp(c.pos, c.r, p);
     if (n && flying) {
       const sp = Math.hypot(c.vel.x, c.vel.z);
       if (sp > 4 && p.hitCD <= 0) { p.hitCD = 0.3; damageProp(p, -n.nx, -n.nz, 1, true); }
@@ -1795,7 +1920,7 @@ function resolveChar(c, flying) {
   c.pos.x = clamp(c.pos.x, -MAP_X + 0.3, MAP_X - 0.3); c.pos.z = clamp(c.pos.z, MAP_Z0 + 0.3, MAP_Z1 - 0.3);
 }
 function insideAnyProp(x, z, r) {
-  return props.some(p => p.alive && distToBox({ x, z }, propBox(p)).d < r + 0.15);
+  return props.some(p => p.alive && distToProp({ x, z }, p).d < r + 0.15);
 }
 
 // ---------- 길 찾기: 맵을 0.5m 칸으로 나눠 벽·기물 칸을 막고 A*로 돌아가는 길을 찾음 ----------
@@ -2127,10 +2252,14 @@ function makeHuman(L) {
    ===================================================================== */
 // models/<이름>/<이름>.fbx + texture.jpg (Rodin 텍스처를 1024 JPG로 줄인 것)
 const MODELS = Object.fromEntries(
-  ['kim', 'kang', 'nam', 'oh', 'han', 'lee', 'mun', 'guard', 'cleaner', 'worker', 'hero_m', 'hero_f', 'pig']
+  ['kim', 'kang', 'nam', 'oh', 'han', 'lee', 'mun', 'guard', 'cleaner', 'worker', 'hero_m', 'hero_f', 'pig',
+   'police', 'union', 'mfds_temp', 'inspector', 'chairman']
     .map(k => [k, { fbx: `models/${k}/${k}.fbx`, tex: `models/${k}/texture.jpg` }]));
 // 모든 캐릭터가 같이 쓰는 동작 (Mixamo 뼈 구조가 같아서 공유 가능). 없는 파일은 건너뜀
-const ANIM_NAMES = ['idle', 'walk', 'run', 'yell', 'fall', 'getup', 'punch', 'hit'];
+const ANIM_NAMES = ['idle', 'walk', 'run', 'yell', 'fall', 'getup', 'punch', 'hit',
+  // 10-31 추가: 앉아서 타자, 수다, 통화, 폰 보기, 커피, 겁먹기, 비틀거리기, 삿대질, 박수, 발차기, 승리, 춤, 운전
+  'typing', 'talk', 'phone', 'text', 'drink', 'terrified', 'dizzy', 'angry', 'clap', 'kick', 'victory', 'dance', 'drive',
+  'sit']; // sit: 아직 없음 (Mixamo Sitting Idle 받으면 안마의자에 앉음)
 const modelLib = {}, clipLib = {};
 
 const PACKED = false; // 배포용 사본에서만 true
@@ -2154,34 +2283,56 @@ async function loadModels() {
     modelLib[key] = prepModel(o, tex);
   }));
   makePunchClips();
+  makeWorkClip();
 }
 // 샌드백 치기 동작(3초)에서 오른손/왼손이 가장 앞으로 뻗은 순간을 찾아 짧은 잽 2개로 잘라 씀
 // → 대상이 없어도 클릭 한 번에 바로 주먹이 나감
+// 발차기도 같은 방식: 발이 가장 앞으로 뻗은 순간 앞뒤만 잘라 씀
 function makePunchClips() {
-  const lib = Object.entries(modelLib).find(([k]) => k !== 'pig')?.[1], src = clipLib.punch;
-  if (!lib || !src) return;
+  const lib = Object.entries(modelLib).find(([k]) => k !== 'pig')?.[1];
+  if (!lib) return;
+  const cut = (src, name, t, before, after) => {
+    const c = src.clone(); c.name = name;
+    trimClip(c, Math.max(0, t - before), Math.min(src.duration, t + after));
+    clipLib[name] = c;
+  };
+  if (clipLib.punch) {
+    const best = reachPeak(lib, clipLib.punch, ['RightHand', 'LeftHand']);
+    if (best.RightHand) cut(clipLib.punch, 'punchR', best.RightHand[0], 0.2, 0.25);
+    if (best.LeftHand) cut(clipLib.punch, 'punchL', best.LeftHand[0], 0.2, 0.25);
+  }
+  if (clipLib.kick) {
+    const best = reachPeak(lib, clipLib.kick, ['RightFoot', 'LeftFoot']);
+    const foot = Object.values(best).sort((a, b) => b[1] - a[1])[0];
+    if (foot) cut(clipLib.kick, 'kick', foot[0], 0.3, 0.3);
+  }
+}
+// 서서 일하는 동작: 앉아서 타자 치는 동작(typing)의 팔·손만 떼어서 서 있는 동작(idle)에 붙임
+// → 실험·장비·PC 업무 때 손을 앞에서 바쁘게 움직임 (Mixamo에서 따로 안 받아도 됨)
+function makeWorkClip() {
+  const ty = clipLib.typing, id = clipLib.idle;
+  if (!ty || !id) return;
+  const arm = t => /(Shoulder|Arm|Hand)/.test(t.name);
+  const body = id.clone(); trimClip(body, 0, Math.min(id.duration, ty.duration));
+  const tracks = [...body.tracks.filter(t => !arm(t)), ...ty.clone().tracks.filter(arm)];
+  clipLib.work = new THREE.AnimationClip('work', Math.min(id.duration, ty.duration), tracks);
+}
+// 동작 중 각 뼈가 몸 앞쪽으로 가장 멀리 나간 순간 { 뼈이름: [시간, 거리] }
+function reachPeak(lib, clip, names) {
   const root = SkeletonUtils.clone(lib.root), mixer = new THREE.AnimationMixer(root);
-  mixer.clipAction(src).play();
+  mixer.clipAction(clip).play();
   const bone = n => root.getObjectByName('mixamorig' + n);
-  const hips = bone('Hips'), hands = { R: bone('RightHand'), L: bone('LeftHand') };
-  const best = { R: [0, -Infinity], L: [0, -Infinity] }, v = new THREE.Vector3(), hv = new THREE.Vector3();
-  for (let t = 0; t < src.duration; t += 1 / 30) {
+  const hips = bone('Hips'), bones = names.map(n => [n, bone(n)]).filter(b => b[1]);
+  const best = {}, v = new THREE.Vector3(), hv = new THREE.Vector3();
+  for (let t = 0; t < clip.duration; t += 1 / 30) {
     mixer.setTime(t); root.updateMatrixWorld(true);
     root.worldToLocal(hips.getWorldPosition(hv));
-    for (const k in hands) {
-      if (!hands[k]) continue;
-      const reach = root.worldToLocal(hands[k].getWorldPosition(v)).z - hv.z; // 모델은 +z를 바라봄
-      if (reach > best[k][1]) best[k] = [t, reach];
+    for (const [n, b] of bones) {
+      const reach = root.worldToLocal(b.getWorldPosition(v)).z - hv.z; // 모델은 +z를 바라봄
+      if (!best[n] || reach > best[n][1]) best[n] = [t, reach];
     }
   }
-  for (const k in best) {
-    const t = best[k][0];
-    if (best[k][1] === -Infinity) continue;
-    const c = src.clone(); c.name = 'punch' + k;
-    const t0 = Math.max(0, t - 0.2), t1 = Math.min(src.duration, t + 0.25);
-    trimClip(c, t0, t1);
-    clipLib['punch' + k] = c;
-  }
+  return best;
 }
 function trimClip(clip, t0, t1) {
   for (const tr of clip.tracks) { tr.trim(t0, t1); tr.shift(-t0); }
@@ -2296,7 +2447,7 @@ function attachModel(c, key, v) {
   }
   const mixer = new THREE.AnimationMixer(m), acts = {};
   for (const name in clipLib) acts[name] = mixer.clipAction(clipLib[name]);
-  for (const name of ['fall', 'getup', 'punchR', 'punchL']) if (acts[name]) { acts[name].setLoop(THREE.LoopOnce); acts[name].clampWhenFinished = true; }
+  for (const name of ['fall', 'getup', 'punchR', 'punchL', 'kick', 'victory']) if (acts[name]) { acts[name].setLoop(THREE.LoopOnce); acts[name].clampWhenFinished = true; }
   c.rig = { m, mixer, acts, cur: null };
   playRig(c, 'idle');
   c.body.visible = false;
@@ -2316,18 +2467,21 @@ function updateRig(c, dt, speed) {
   const r = c.rig;
   if (r.pig) return updatePig(c, dt, speed);
   let want = 'idle';
-  if (c.state === 'knocked') want = 'fall';
+  if (c.state === 'knocked' || c.state === 'vanish') want = 'fall';
   else if (c.state === 'getup') want = 'getup';
+  else if (c.kickT > 0 && r.acts.kick) want = 'kick';
   else if (c.punchT > -0.25 && r.acts.punchR) want = c.punchSide > 0 ? 'punchR' : 'punchL';
   else if (speed > 0.1) want = speed > 2.6 || !r.acts.walk ? 'run' : 'walk';
+  else if (c.state === 'chase' && c.bubbleT > 0 && r.acts.angry) want = 'angry'; // 잔소리하며 삿대질
   else if (c.state === 'angry' || (c.state === 'chase' && c.bubbleT > 0)) want = 'yell';
+  else if (c.pose && r.acts[c.pose]) want = c.pose; // 상황별 서 있는(앉은) 동작: 타자, 통화, 커피, 겁먹기, 춤…
   // 일어나는 동작이 끝날 때까지 다시 움직이지 않게 시간 확보
   if (want === 'getup' && r.cur !== 'getup' && r.acts.getup) c.timer = Math.max(c.timer, r.acts.getup.getClip().duration / 1.6);
   // 연타: 같은 손이 다시 나가도 처음부터 다시 재생
   if (c.punchNew) { c.punchNew = false; if (r.cur === want) r.cur = null; }
   const a = playRig(c, want, want.startsWith('punch') ? 0.06 : 0.2);
   // 이동 속도에 맞춰 걷기/뛰기 동작 속도 조절 (발 미끄러짐 줄이기)
-  a.timeScale = r.cur === 'run' ? clamp(speed / 4.4, 0.45, 1.5) : r.cur === 'walk' ? speed / 1.4 : r.cur === 'getup' ? 1.6 : r.cur.startsWith('punch') ? 1.3 : 1;
+  a.timeScale = r.cur === 'run' ? clamp(speed / 4.4, 0.45, 1.5) : r.cur === 'walk' ? speed / 1.4 : r.cur === 'getup' ? 1.6 : r.cur.startsWith('punch') || r.cur === 'kick' ? 1.3 : 1;
   r.mixer.update(dt);
 }
 // 돼지 (히든 주인공): 팔다리가 짧고 배가 커서 사람 동작을 쓰면 메쉬가 몸을 파고듦
@@ -2544,6 +2698,32 @@ const CAST = [
     talk: ['방문증 패용하셨어요?', '차량 등록 하셨나요?', '오늘 외제차가 한 대 들어왔어요'],
     hit: ['어허!', '정문에서 이러시면 안 돼요!', '무전 칩니다!'],
     nag: ['거기 서세요!', '정문 봉쇄!', '삐익-!'] },
+  // ----- 10-31 새 캐릭터 (식약처 실사관·계약직은 아래 EVENT_CAST) -----
+  { name: '회장님', model: 'chairman', zone: 'lobby', role: 'manager', voice: 0.62, speed: 1.8, zones: ['lobby', 'hall'],
+    look: { h: 1.0, build: 'heavy', skin: SKIN[1], hair: ['slick', 0xe5e7eb], outfit: { type: 'suit', c1: 0x111827, tie: 0x7f1d1d }, pants: 0x111827 },
+    talk: ['허허, 다들 열심히 하는구먼', '내가 이 회사를 단칸방에서 시작했어', '자네 몇 년차인가?', '요즘 주가가 말이야...'],
+    hit: ['나, 나를 누군 줄 알고!!', '회장이야 회장!!', '경비! 경비!!'],
+    nag: ['자네 해고야!!', '이름이 뭔가!', '인사팀장 불러!', '감히 회장을!'] },
+  { name: '노조위원장', model: 'union', zone: 'smoke', role: 'staff', voice: 0.75, zones: ['smoke', 'parking'],
+    look: { h: 1.0, build: 'heavy', skin: SKIN[2], hair: ['short', 0x1c1917], outfit: { type: 'shirt', c1: 0xdc2626 }, pants: 0x1f2937 },
+    talk: ['임금 인상! 투쟁!', '이번 단체협약은 양보 못 해', '조합원 가입하실래요?', '야근 수당 제대로 받고 계세요?'],
+    hit: ['노조 탄압이다!!', '이거 다 기록할 거야!', '단결! 투쟁!'] },
+  { name: '경찰관', model: 'police', zone: 'gate', role: 'staff', voice: 0.82, zones: ['gate', 'parking'],
+    look: { h: 1.02, skin: SKIN[1], hair: ['short', 0x1c1917], outfit: { type: 'uniform', c1: 0x1e3a8a }, pants: 0x1e293b, acc: ['cap'] },
+    talk: ['신고 받고 왔습니다', '이 근처에서 난동 신고가 있었는데...', '주차 똑바로 하세요', '수고하십니다'],
+    hit: ['공무집행방해입니다!!', '지원 요청! 지원 요청!', '이건 현행범이야!'] },
+];
+// 처음엔 없고 이벤트 때만 나타나는 사람들 (식약처 실사: 복도 공중전화로 신고하면 정문으로 들어옴)
+const EVENT_CAST = [
+  { name: '식약처 실사관', model: 'inspector', zone: 'gate', role: 'official', voice: 0.85, event: 'mfds',
+    look: { h: 1.02, skin: SKIN[1], hair: ['short', 0x1c1917], glasses: 0x111827, outfit: { type: 'suit', c1: 0xd6c4a8 }, pants: 0x1f2937 },
+    talk: ['이 기록서 원본 보여주세요', '로그북 서명이 빠졌네요', '이 일탈은 언제 보고하셨죠?', 'ALCOA+ 아시죠?'],
+    hit: ['실사 방해입니다!!', '이거 지적사항이에요!', '공무집행방해!'],
+    nag: ['중대 지적입니다!', '거기 서세요!', '업무정지 각오하세요!', '감사 결과 기대하세요!'] },
+  { name: '식약처 계약직', model: 'mfds_temp', zone: 'gate', role: 'official', voice: 1.2, event: 'mfds',
+    look: { h: 0.99, build: 'slim', skin: SKIN[0], hair: ['short', 0x1c1917], outfit: { type: 'shirt', c1: 0x1e3a8a }, pants: 0x1f2937, acc: ['badge'] },
+    talk: ['서류 박스 어디에 둘까요?', '실사관님 따라다니느라 힘들어요', '저 계약 3개월 남았어요...', '복사 100장 더 해야 해요'],
+    hit: ['서류 다 쏟아졌잖아요!', '저 계약직이에요!!', '으악 박스!'] },
 ];
 const PLAYER_LOOK = (female) => ({
   h: female ? 0.96 : 1.02, female, skin: SKIN[female ? 0 : 1], hair: female ? ['ponytail', 0x3b2416] : ['messy', 0x1b1b1b], topMat: playerShirt,
@@ -2557,6 +2737,7 @@ function makeChar(look, extra = {}) {
   return Object.assign(h, {
     pos: new THREE.Vector3(), vel: new THREE.Vector3(), facing: 0, faceTo: 0, state: 'wander', timer: 0,
     walk: 0, punchT: 0, punchSide: 1, punchCD: 0, r: 0.38, bubble: null, bubbleT: 0, spin: 0, hits: 0,
+    kickT: 0, combo: 0, lastPunchT: -9, pose: null, poseT: 0, poseName: null, seat: null,
     idleT: rand(0, 2), talkT: 0, target: null, stuckT: 0, nagT: 0, chainCD: 0, counterCD: 0, lookT: 0, look: 0,
   }, extra);
 }
@@ -2572,6 +2753,7 @@ function spawnNPC(def) {
     c.pos.set(p.x, 0, p.z); c.facing = c.faceTo = rand(0, PI * 2);
   }
   npcs.push(c);
+  return c;
 }
 function randomPointIn(zn) {
   for (let i = 0; i < 12; i++) {
@@ -2688,8 +2870,8 @@ function updateBubble(c, dt) {
   c.bubble.style.transform = `translate(${s.x}px, ${s.y}px) translate(-50%, -100%)`;
 }
 let bannerTimer = 0;
-function banner(text, ms = 2200) {
-  const b = $('#banner'); b.textContent = text; b.classList.add('show');
+function banner(text, ms = 2200, alert = false) {
+  const b = $('#banner'); b.textContent = text; b.classList.add('show'); b.classList.toggle('alert', alert);
   clearTimeout(bannerTimer); bannerTimer = setTimeout(() => b.classList.remove('show'), ms);
 }
 let wastedTimer = 0;
@@ -2712,6 +2894,7 @@ addEventListener('keydown', e => {
   if (!running) return;
   if (e.code === 'Space' || e.code === 'KeyJ') { doPunch(); e.preventDefault(); }
   if (e.code === 'KeyE' || e.code === 'KeyK') doInteract();
+  if (e.code === 'KeyM' || e.code === 'Tab') { toggleMap(); e.preventDefault(); }
 });
 addEventListener('keyup', e => { keys[e.code] = false; });
 addEventListener('contextmenu', e => e.preventDefault());
@@ -2720,6 +2903,7 @@ const stick = { id: null, ox: 0, oy: 0, x: 0, y: 0 };
 const stickEl = $('#stick'), knobEl = $('#knob'), canvas = renderer.domElement;
 canvas.addEventListener('pointerdown', e => {
   if (!running) return;
+  if (MM.big) { toggleMap(false); return; } // 큰 지도 보는 중엔 화면 아무 데나 누르면 닫힘
   if (e.clientX > innerWidth * 0.55) { doPunch(); return; }
   if (stick.id !== null) return;
   stick.id = e.pointerId; stick.ox = e.clientX; stick.oy = e.clientY; stick.x = stick.y = 0;
@@ -2761,10 +2945,17 @@ function getInput() {
 /* =====================================================================
    13. 액션: 펀치 / 넉백 / 파괴 / 상호작용
    ===================================================================== */
-const standing = c => c.state !== 'knocked' && c.state !== 'getup';
+const standing = c => c.state !== 'knocked' && c.state !== 'getup' && c.state !== 'vanish';
 function doPunch() {
   if (!running || !standing(player) || player.punchCD > 0) return;
-  player.punchCD = 0.28; player.punchT = 0.16; player.punchSide *= -1; player.punchNew = true;
+  if (player.veh) { vehAction(); return; }
+  player.poseT = 0;
+  // 빠르게 연타하면 3번째는 발차기 (더 멀리, 더 세게)
+  player.combo = T - player.lastPunchT < 0.55 ? player.combo + 1 : 1; player.lastPunchT = T;
+  const kick = player.combo >= 3, reach = kick ? 0.4 : 0, power = tune.punch * (kick ? 1.6 : 1);
+  if (kick) { player.combo = 0; player.punchCD = 0.5; player.punchT = 0.35; player.kickT = 0.6; }
+  else { player.punchCD = 0.28; player.punchT = 0.16; player.punchSide *= -1; }
+  player.punchNew = true;
   cancelWork();
   const px = player.pos.x, pz = player.pos.z;
   let fx = Math.sin(player.facing), fz = Math.cos(player.facing);
@@ -2777,7 +2968,7 @@ function doPunch() {
     if (score < bestScore) { bestScore = score; best = { tx, tz }; }
   };
   for (const n of npcs) if (standing(n)) consider(n.pos.x, n.pos.z, Math.hypot(n.pos.x - px, n.pos.z - pz), 2.4);
-  for (const p of props) if (p.alive) { const r = distToBox(player.pos, propBox(p)); consider(r.cx, r.cz, r.d, 1.5); }
+  for (const p of props) if (p.alive) { const r = distToProp(player.pos, p); consider(r.cx, r.cz, r.d, 1.5); }
   if (best && Math.hypot(best.tx - px, best.tz - pz) > 0.01) {
     player.facing = player.faceTo = Math.atan2(best.tx - px, best.tz - pz);
     fx = Math.sin(player.facing); fz = Math.cos(player.facing);
@@ -2786,14 +2977,15 @@ function doPunch() {
   for (const n of npcs) {
     if (!standing(n)) continue;
     const dx = n.pos.x - px, dz = n.pos.z - pz, d = Math.hypot(dx, dz);
-    if (d < 1.7 && (d < 0.3 || (dx * fx + dz * fz) / d > 0.35)) { hitNPC(n, fx, fz); hit = true; }
+    if (d < 1.7 + reach && (d < 0.3 || (dx * fx + dz * fz) / d > 0.35)) { hitNPC(n, fx, fz, power); hit = true; }
   }
   for (const p of props) {
     if (!p.alive) continue;
-    const r = distToBox(player.pos, propBox(p));
-    if (r.d < 1.3 && (r.d < 0.25 || ((r.cx - px) * fx + (r.cz - pz) * fz) / r.d > 0.25)) { damageProp(p, fx, fz, tune.punch, false); hit = true; }
+    const r = distToProp(player.pos, p);
+    if (r.d < 1.3 + reach && (r.d < 0.25 || ((r.cx - px) * fx + (r.cz - pz) * fz) / r.d > 0.25)) { damageProp(p, fx, fz, power, false); hit = true; }
   }
-  if (hit) { hitstop = 0.06; shakeAmt = Math.max(shakeAmt, 0.25 * tune.shake); sfx('punch'); }
+  if (kick) floatText(px, 2.4, pz, hit ? '발차기!!' : '휙!', hit ? '#fb923c' : '#9aa4b8', hit ? 24 : 16);
+  if (hit) { hitstop = kick ? 0.1 : 0.06; shakeAmt = Math.max(shakeAmt, (kick ? 0.45 : 0.25) * tune.shake); sfx('punch'); }
   else sfx('whoosh');
 }
 function hitNPC(n, dx, dz, power = tune.punch) {
@@ -2813,6 +3005,8 @@ function hitNPC(n, dx, dz, power = tune.punch) {
 }
 function knockNPC(n, dx, dz, power, chain = false) {
   const fly = power * tune.fly;
+  leaveSeat(n);
+  questProgress('hit', n.name);
   n.state = 'knocked'; n.timer = 1.5 + power * 0.3;
   n.vel.set(dx * 6.5 * fly, 3.5 + 1.5 * fly, dz * 6.5 * fly);
   n.facing = n.faceTo = Math.atan2(-dx, -dz);
@@ -2829,6 +3023,7 @@ function knockNPC(n, dx, dz, power, chain = false) {
 // 플레이어가 맞음: 체력 깎고, power가 있으면 넘어짐
 function hurtPlayer(dmg, dx, dz, power = 0) {
   if (cheat.god || state.dead) return;
+  if (player.veh) { hurtVeh(player.veh, dmg / 6); return; } // 타고 있으면 차가 대신 맞음
   state.hp = Math.max(0, state.hp - dmg); state.hurtT = 0;
   floatText(player.pos.x, 2.3, player.pos.z, '-' + dmg, '#ef4444', 22);
   const fx = $('#hurtFx'); fx.style.opacity = 1; setTimeout(() => { fx.style.opacity = 0; }, 180);
@@ -2849,6 +3044,7 @@ function die(dx, dz) {
 }
 function respawn() {
   const [sx, sz, sf] = SPAWNS[selectedDept] || SPAWNS.qc;
+  if (player.veh) exitVehicle();
   state.dead = false; state.hp = 100; state.warn = 0; state.lastStars = 0;
   player.state = 'normal'; player.timer = 0; player.vel.set(0, 0, 0);
   player.pos.set(sx, 0, sz); player.facing = player.faceTo = sf;
@@ -2886,8 +3082,11 @@ function damageProp(p, dx, dz, power, byBody) {
   }
 }
 function breakProp(p, dx, dz) {
+  const wreck = p === player.veh; // 타고 있던 차가 부서지면 튕겨 나오고 폭발
+  if (wreck) exitVehicle(true);
   p.alive = false;
   scene.remove(p.g);
+  if (p.carry) dropCarry(p);
   if (work.prop === p) cancelWork();
   const v = p.def.value;
   state.damage += v;
@@ -2899,12 +3098,23 @@ function breakProp(p, dx, dz) {
     for (const n of npcs) if (standing(n) && Math.hypot(n.pos.x - p.x, n.pos.z - p.z) < 3) { say(n, '콜록콜록!!', 1.5); setFace(n, 'scared'); }
   }
   floatText(p.x, 1.6, p.z, '-' + fmtWon(v), '#ff6b6b', v >= 1e7 ? 26 : 19);
+  questProgress('break', p.type);
   if (p.def.breakText) floatText(p.x, 2.2, p.z, p.def.breakText, '#4ade80', 20);
-  if (v >= 1e8) { banner(`💥 ${p.def.name} 파괴! (${fmtWon(v)})`); sfx('boom'); }
+  if (v >= 1e8) {
+    banner(`💥 ${p.def.name} 파괴! (${fmtWon(v)})`); sfx('boom');
+    player.poseName = 'victory'; player.poseT = 2.5;
+    let lines = 0; // 근처 직원들 박수
+    for (const n of npcs) {
+      if (n.state !== 'wander' || n.role !== 'staff' || Math.hypot(n.pos.x - p.x, n.pos.z - p.z) > 12) continue;
+      n.poseName = 'clap'; n.poseT = 3; n.idleT = Math.max(n.idleT, 3); n.target = null;
+      if (lines++ < 2) say(n, pick(['속이 다 시원하네!', '브라보!!', '나도 저러고 싶었어', '와 미쳤다 ㅋㅋ']), 2);
+    }
+  }
   addStress(-(2 + Math.min(p.def.hp, 6) * 1.2));
   addWarn(0.25 + (v >= 1e7 ? 0.8 : 0));
   shakeAmt = Math.max(shakeAmt, 0.4 * tune.shake);
   sfx(p.def.snd);
+  if (wreck) { banner(`🔥 ${p.def.name} 폭발!`, 2200); explode(p.x, p.z); }
 }
 function launchRocket(p, dx, dz) {
   const g = new THREE.Group(), inner = new THREE.Group();
@@ -2926,7 +3136,7 @@ function updateRockets(dt) {
     for (const w of walls) { const n = pushOutCircle(r.pos, 0.25, w); if (n) bounce(v, n, 0.85); }
     for (const p of props) {
       if (!p.alive) continue;
-      const n = pushOutCircle(r.pos, 0.25, propBox(p));
+      const n = pushOutProp(r.pos, 0.25, p);
       if (n) { bounce(v, n, 0.7); if (p.hitCD <= 0) { p.hitCD = 0.25; damageProp(p, -n.nx, -n.nz, 2, true); } }
     }
     r.vx = v.x; r.vz = v.z;
@@ -2947,14 +3157,17 @@ function explode(x, z) {
     const dx = n.pos.x - x, dz = n.pos.z - z, d = Math.hypot(dx, dz);
     if (d < 3.2 && standing(n) && n.role !== 'cleaner') knockNPC(n, dx / (d || 1), dz / (d || 1), 1.6, true);
   }
-  for (const p of props) if (p.alive && !p.def.fixed && distToBox({ x, z }, propBox(p)).d < 2.5) { const dx = p.x - x, dz = p.z - z, d = Math.hypot(dx, dz) || 1; damageProp(p, dx / d, dz / d, 2, true); }
+  for (const p of props) if (p.alive && !p.def.fixed && distToProp({ x, z }, p).d < 2.5) { const dx = p.x - x, dz = p.z - z, d = Math.hypot(dx, dz) || 1; damageProp(p, dx / d, dz / d, 2, true); }
   const pd = Math.hypot(player.pos.x - x, player.pos.z - z);
   if (pd < 2.5) hurtPlayer(30, (player.pos.x - x) / (pd || 1), (player.pos.z - z) / (pd || 1), 1.3);
 }
 
 function addStress(v) {
   state.stress = clamp(state.stress + v, 0, 100);
-  if (state.stress <= 0 && !state.zeroShown) { state.zeroShown = true; banner('🧘 스트레스 제로! 오늘은 칼퇴다!', 3000); }
+  if (state.stress <= 0 && !state.zeroShown) {
+    state.zeroShown = true; banner('🧘 스트레스 제로! 오늘은 칼퇴다!', 3000);
+    if (player) { player.poseName = 'dance'; player.poseT = 6; } // 움직이면 멈춤
+  }
   if (state.stress > 30) state.zeroShown = false;
 }
 function addWarn(v) {
@@ -2971,9 +3184,14 @@ function addWarn(v) {
 
 function doInteract() {
   if (!running || work.active || !standing(player)) return;
+  if (player.veh) { exitVehicle(); return; }
+  const v = nearVehicle();
+  if (v) { enterVehicle(v); return; }
+  const u = nearUseProp();
+  if (u) { player.faceTo = Math.atan2(u.x - player.pos.x, u.z - player.pos.z); USE[u.def.use].act(u); return; }
   let nn = null, nd = 2.0;
   for (const n of npcs) {
-    if (!['wander', 'chase', 'post'].includes(n.state)) continue;
+    if (!['wander', 'chase', 'post', 'sit', 'inspect'].includes(n.state)) continue;
     const d = Math.hypot(n.pos.x - player.pos.x, n.pos.z - player.pos.z);
     if (d < nd) { nn = n; nd = d; }
   }
@@ -2981,6 +3199,7 @@ function doInteract() {
     nn.faceTo = Math.atan2(player.pos.x - nn.pos.x, player.pos.z - nn.pos.z);
     player.faceTo = Math.atan2(nn.pos.x - player.pos.x, nn.pos.z - player.pos.z);
     nn.talkT = 2.6;
+    if (nn === quest.giver) { startQuest(nn); return; }
     const line = (nn.role === 'manager' && state.warn >= 2) ? '자네 요즘 무슨 일 있나...?' : pick(nn.def.talk);
     say(nn, line, 2.6); grunt(nn.def.voice, 0.08, 0, sfxBus, 0.2);
     return;
@@ -2988,21 +3207,204 @@ function doInteract() {
   let wp = null, wd = 1.6;
   for (const p of props) {
     if (!p.alive || !p.def.work) continue;
-    const r = distToBox(player.pos, propBox(p));
+    const r = distToProp(player.pos, p);
     if (r.d < wd) { wp = p; wd = r.d; }
   }
   if (wp) {
     work.active = true; work.t = 0; work.prop = wp;
-    player.faceTo = Math.atan2(wp.x - player.pos.x, wp.z - player.pos.z);
+    work.seat = !!(wp.def.work.seat && player.rig?.acts?.sit);
+    if (work.seat) { // 안마의자에 앉기
+      player.pos.set(wp.x - Math.sin(wp.rot) * 0.1, SIT_Y, wp.z - Math.cos(wp.rot) * 0.1);
+      player.facing = player.faceTo = wp.rot;
+    } else { // 손이 닿게 물건 바로 앞까지 다가감
+      const r = distToProp(player.pos, wp), k = (r.d - 0.45) / (r.d || 1);
+      const x = player.pos.x + (r.cx - player.pos.x) * k, z = player.pos.z + (r.cz - player.pos.z) * k;
+      if (r.d > 0.5 && spotFree(x, z)) { player.pos.x = x; player.pos.z = z; }
+    }
+    player.faceTo = work.seat ? wp.rot : Math.atan2(wp.x - player.pos.x, wp.z - player.pos.z);
     $('#workLbl').textContent = wp.def.work.label + '...';
     $('#workbar').style.display = 'block';
     return;
   }
   floatText(player.pos.x, 2.2, player.pos.z, '주변에 아무도 없어요', '#9aa4b8', 14);
 }
+const SIT_Y = 0.15; // 안마의자에 앉은 캐릭터 높이 (sit 동작 받은 뒤 엉덩이가 안 맞으면 조절)
 function cancelWork() {
   if (!work.active) return;
-  work.active = false; work.prop = null; $('#workbar').style.display = 'none';
+  if (work.seat) { // 안마의자 앞으로 일어남
+    const p = work.prop, d = p.def.d / 2 + 0.5;
+    player.pos.set(p.x + Math.sin(p.rot) * d, 0, p.z + Math.cos(p.rot) * d);
+  }
+  work.active = false; work.prop = null; work.seat = false; $('#workbar').style.display = 'none';
+}
+
+// ---------- 탈것: 승용차·대표님 차·택배 트럭(주차장), 지게차(생산동) ----------
+// 운전 동작이 아직 없어서 타는 동안 캐릭터는 숨기고 차만 보임
+function nearVehicle() {
+  let best = null, bd = 1.0;
+  for (const p of props) if (p.alive && p.def.ride) { const d = distToProp(player.pos, p).d; if (d < bd) { bd = d; best = p; } }
+  return best;
+}
+function enterVehicle(p) {
+  cancelWork();
+  player.veh = p; p.speed = 0; p.rev = false; p.vx = p.vz = 0;
+  player.g.visible = false;
+  sfx('door'); engineStart();
+  const R = p.def.ride;
+  if (R.warn && !p.stolen) { // 남의 차는 몰래 타는 거라 수배가 조금 오름
+    p.stolen = true; addWarn(R.warn);
+    if (R.msg) banner(R.msg, 2400);
+  }
+  floatText(p.x, 2, p.z, R.fork ? '삐- 삐-' : '부릉부릉!', '#e2e8f0', 18);
+}
+const spotFree = (x, z) => Math.abs(x) < MAP_X - 0.4 && z > MAP_Z0 + 0.4 && z < MAP_Z1 - 0.4
+  && !walls.some(w => distToBox({ x, z }, w).d < 0.35) && !insideAnyProp(x, z, 0.25);
+function exitVehicle(eject) {
+  const p = player.veh; if (!p) return;
+  player.veh = null; p.speed = 0;
+  if (p.carry) dropCarry(p);
+  // 왼쪽 문 → 오른쪽 문 → 뒤 → 앞 순서로 빈자리
+  const spots = [[p.lw + 0.55, 0], [-p.lw - 0.55, 0], [0, -p.ld - 0.55], [0, p.ld + 0.55]].map(([lx, lz]) => toWorld(p, lx, lz));
+  const out = spots.find(s => spotFree(s.x, s.z)) || spots[0];
+  player.pos.set(out.x, 0, out.z);
+  const dx = out.x - p.x, dz = out.z - p.z, d = Math.hypot(dx, dz) || 1;
+  player.facing = player.faceTo = Math.atan2(dx, dz);
+  player.g.visible = true;
+  engineStop();
+  if (eject) knockPlayer(dx / d, dz / d, 1.2); else sfx('door');
+}
+function hurtVeh(p, dmg) {
+  p.hp -= dmg; p.wobble = 1;
+  if (p.hp <= 0) breakProp(p, Math.sin(p.rot), Math.cos(p.rot));
+  else if (p.hp < p.def.hp * 0.35) puff(p.x, 1.2, p.z, 0x4b5563, 0.35, 0, 1, 0, 1.2); // 연기 나기 시작
+}
+// 👊 버튼: 차는 경적, 지게차는 들기/내려놓기 (들 게 없으면 경적)
+function vehAction() {
+  const p = player.veh;
+  player.punchCD = 0.5;
+  if (p.def.ride.fork) { if (p.carry) { dropCarry(p); return; } if (liftProp(p)) return; }
+  sfx(p.def.ride.fork ? 'beep' : 'horn');
+  floatText(p.x, 2.2, p.z, p.def.ride.fork ? '삐- 삐-' : '빵빵!', '#fde68a', 20);
+  const fx = Math.sin(p.rot), fz = Math.cos(p.rot);
+  for (const n of npcs) {
+    if (n.state !== 'wander' || n.role === 'cleaner') continue;
+    const dx = n.pos.x - p.x, dz = n.pos.z - p.z, d = Math.hypot(dx, dz);
+    if (d < 8 && (dx * fx + dz * fz) / (d || 1) > 0.2) { n.state = 'flee'; n.timer = 1.6; setFace(n, 'scared'); say(n, pick(['으악 차다!', '깜짝이야!', '운전 똑바로 해!', '여기 주차장 아니에요!']), 1.4); }
+  }
+}
+function liftProp(p) {
+  const tip = toWorld(p, 0, p.ld + 0.2);
+  let best = null, bd = 0.7;
+  for (const q of props) {
+    if (!q.alive || q.def.ride || q.def.fixed || q.def.mass > 6) continue;
+    const d = distToBox(tip, propBox(q)).d;
+    if (d < bd) { bd = d; best = q; }
+  }
+  if (!best) return false;
+  if (work.prop === best) cancelWork();
+  best.alive = false; best.vx = best.vz = 0; best.carryRot = best.rot - p.rot; // 드는 동안은 충돌·길 찾기에서 빠짐
+  p.carry = best;
+  sfx('clang'); floatText(p.x, 2.2, p.z, '영차!', '#fde68a', 20);
+  return true;
+}
+function dropCarry(p) {
+  const q = p.carry; p.carry = null;
+  const rot = Math.round((p.rot + q.carryRot) / H) * H, swap = Math.abs(Math.sin(rot)) > 0.5;
+  q.rot = rot; q.hw = (swap ? q.def.d : q.def.w) / 2; q.hd = (swap ? q.def.w : q.def.d) / 2;
+  const w = toWorld(p, 0, p.ld + Math.max(q.hw, q.hd) + 0.05);
+  q.x = w.x; q.z = w.z; q.g.position.set(w.x, 0, w.z); q.g.rotation.y = rot;
+  q.vx = Math.sin(p.rot) * 0.2; q.vz = Math.cos(p.rot) * 0.2; // 살짝 밀어서 벽·기물과 겹치면 빠져나오게
+  q.alive = true;
+  sfx('thud');
+}
+const DRIVER_Y = 0.45; // 지게차 운전석에 앉은 캐릭터 높이 (엉덩이가 좌석에 안 맞으면 이 값 조절)
+function driveVehicle(dt) {
+  const p = player.veh, R = p.def.ride, inp = getInput();
+  const ox = p.x, oz = p.z, orot = p.rot;
+  p.vx = p.vz = 0; // 맞아서 밀리는 건 운전 중엔 무시
+  // 조이스틱 방향 = 가고 싶은 방향. 차는 그쪽으로 서서히 돌고, 뒤쪽으로 당기면 브레이크 → 멈추면 후진
+  let target = 0, braking = false;
+  if (inp.m > 0.15) {
+    const a = Math.atan2(inp.x, inp.z), diff = Math.abs(angDiff(a, p.rot));
+    if (!p.rev && diff > 1.95 && p.speed < 1) p.rev = true;
+    else if (p.rev && diff < 1.2 && p.speed > -1) p.rev = false;
+    if (p.rev ? diff < 1.2 : diff > 1.95) braking = true; // 가는 방향 반대로 당기면 브레이크
+    else {
+      target = (p.rev ? -0.45 : 1) * R.max * inp.m;
+      const turn = R.turn * clamp(Math.abs(p.speed) / 2.5, 0, 1) * dt; // 서 있으면 못 돎
+      p.rot += clamp(angDiff(p.rev ? a + PI : a, p.rot), -turn, turn);
+    }
+  }
+  const acc = braking ? R.acc * 1.8 : inp.m <= 0.15 ? R.acc * 0.6 : (target * p.speed < 0 ? R.acc * 1.8 : R.acc);
+  if (braking && p.speed > 6 && Math.random() < dt * 8) sfx('screech');
+  p.speed += clamp(target - p.speed, -acc * dt, acc * dt);
+  const fx = Math.sin(p.rot), fz = Math.cos(p.rot);
+  p.x += fx * p.speed * dt; p.z += fz * p.speed * dt;
+
+  // 벽·기물 충돌: 차를 원 3개(앞·가운데·뒤)로 보고 밀어냄. 가벼운 기물은 세게 박으면 부서지고 통과
+  const bx = p.x, bz = p.z;
+  for (const off of [p.ld - p.lw, 0, p.lw - p.ld]) {
+    const cp = { x: p.x + fx * off, z: p.z + fz * off }, sx = cp.x, sz = cp.z;
+    for (const w of walls) pushOutCircle(cp, p.lw, w);
+    for (const q of props) {
+      if (q === p || !q.alive || Math.abs(q.x - cp.x) > 6 || Math.abs(q.z - cp.z) > 6) continue;
+      const px = cp.x, pz = cp.z, n = pushOutProp(cp, p.lw, q);
+      if (!n) continue;
+      const impact = -(fx * n.nx + fz * n.nz) * p.speed;
+      if (impact > 2.5 && q.hitCD <= 0 && !q.def.fixed) {
+        q.hitCD = 0.4;
+        damageProp(q, -n.nx, -n.nz, impact * 0.4, true);
+        if (!q.alive) { cp.x = px; cp.z = pz; p.speed *= 0.88; }
+      }
+    }
+    p.x += cp.x - sx; p.z += cp.z - sz;
+  }
+  const cx = p.x - bx, cz = p.z - bz, cl = Math.hypot(cx, cz);
+  if (cl > 1e-4) { // 부딪힌 방향 속도는 튕겨내고 옆으로 미끄러지는 만큼만 남김
+    const nx = cx / cl, nz = cz / cl, vn = (fx * nx + fz * nz) * p.speed;
+    if (vn < 0) {
+      p.speed -= 1.25 * vn * (fx * nx + fz * nz);
+      if (-vn > 4) {
+        crashSound('metal'); shakeAmt = Math.max(shakeAmt, 0.5 * tune.shake); hitstop = 0.05;
+        floatText(p.x, 1.8, p.z, '쾅!', '#e2e8f0', 22);
+        hurtVeh(p, (-vn - 4) * 0.35);
+        if (!player.veh) return; // 부서져서 튕겨 나옴
+      }
+    }
+  }
+  p.x = clamp(p.x, -MAP_X + p.lw, MAP_X - p.lw); p.z = clamp(p.z, MAP_Z0 + p.lw, MAP_Z1 - p.lw);
+
+  // 사람: 빠르면 날려 버리고, 느리면 옆으로 밀어냄. 여사님은 차도 막아선다
+  const sp = Math.abs(p.speed), dir = Math.sign(p.speed);
+  for (const n of npcs) {
+    if (!standing(n) || Math.abs(n.pos.x - p.x) > 4 || Math.abs(n.pos.z - p.z) > 4) continue;
+    if (distToProp(n.pos, p).d > n.r + 0.05) continue;
+    if (n.role === 'cleaner') {
+      p.x = ox; p.z = oz; p.rot = orot; p.speed *= -0.3;
+      if (sp > 1.5 && n.counterCD <= 0) {
+        n.counterCD = 1.5; n.state = 'angry'; n.timer = 2; setFace(n, 'yell');
+        n.faceTo = Math.atan2(p.x - n.pos.x, p.z - n.pos.z);
+        say(n, pick(['어딜 감히 차로!!', '차 빼!!!', '여기가 도로야?!']), 2); sfx('clang'); grunt(n.def.voice, 0.3);
+        shakeAmt = Math.max(shakeAmt, 0.5 * tune.shake); hurtVeh(p, 2);
+        if (!player.veh) return;
+      }
+    } else if (sp > 2.5) {
+      let kx = fx * dir + (n.pos.x - p.x) / 4, kz = fz * dir + (n.pos.z - p.z) / 4; // 앞으로 + 비스듬히
+      const kl = Math.hypot(kx, kz) || 1;
+      knockNPC(n, kx / kl, kz / kl, clamp(sp / 5, 0.8, 2.2));
+      addStress(-2); p.speed *= 0.9; hitstop = 0.04;
+    } else pushOutProp(n.pos, n.r, p);
+  }
+
+  setVehAABB(p);
+  p.g.position.set(p.x, 0, p.z); p.g.rotation.y = p.rot;
+  if (p.carry) { // 든 물건은 포크 위에
+    const w = toWorld(p, 0, p.ld - 0.32);
+    p.carry.g.position.set(w.x, 0.45, w.z); p.carry.g.rotation.y = p.rot + p.carry.carryRot;
+  }
+  player.pos.set(p.x, 0, p.z); player.facing = player.faceTo = p.rot;
+  if (sp > 3) addStress(-0.3 * dt); // 드라이브는 스트레스 해소
+  engineTick(sp / R.max);
 }
 
 /* =====================================================================
@@ -3063,26 +3465,36 @@ function updateGetup(c, dt) {
 }
 
 function updatePlayer(dt) {
-  player.punchCD -= dt; player.punchT -= dt;
+  player.punchCD -= dt; player.punchT -= dt; player.kickT -= dt; player.poseT -= dt;
   let sp = 0;
   if (player.state === 'knocked') {
     if (updateKnocked(player, dt) && player.timer <= 0) { player.state = 'getup'; player.timer = 0.45; player.stars.visible = false; }
   } else if (player.state === 'getup') {
     if (updateGetup(player, dt)) player.state = 'normal';
+  } else if (player.veh) {
+    driveVehicle(dt);
   } else {
     const inp = getInput();
     if (punchHeld && player.punchCD <= 0) doPunch();
     if (inp.m > 0.1 && player.punchT < -0.18) { // 주먹 지르는 동안은 제자리 (미끄러짐 방지)
-      cancelWork();
+      cancelWork(); player.poseT = 0;
       sp = tune.speed * inp.m;
       player.pos.x += inp.x * sp * dt; player.pos.z += inp.z * sp * dt;
       player.faceTo = Math.atan2(inp.x, inp.z);
     }
     player.facing = angLerp(player.facing, player.faceTo, 1 - Math.exp(-18 * dt));
-    resolveChar(player, false);
+    if (!work.seat) resolveChar(player, false);
     setFace(player, player.punchT > 0 || state.stress > 75 ? 'angry' : 'normal');
   }
-  animateHuman(player, dt, sp);
+  // 지게차는 운전석이 뚫려 있어서 앉은 모습을 보여줌 (승용차·트럭은 지붕에 가려서 숨김)
+  const seat = player.veh && player.veh.def.ride.fork && player.rig?.acts?.drive;
+  player.pose = seat ? 'drive' : work.active ? work.prop.def.work.pose : player.poseT > 0 && !player.veh ? player.poseName : null;
+  if (seat) {
+    const w = toWorld(player.veh, 0, -0.2);
+    player.pos.set(w.x, DRIVER_Y, w.z);
+    animateHuman(player, dt, 0);
+  } else if (player.veh) player.g.visible = false;
+  else animateHuman(player, dt, sp);
 
   if (work.active) {
     work.t += dt / work.prop.def.work.dur;
@@ -3096,6 +3508,7 @@ function updatePlayer(dt) {
       const wdef = work.prop.def.work;
       cancelWork();
       state.works++;
+      questProgress('work', wdef);
       addStress(wdef.stress);
       if (wdef.stress < 0) state.hp = Math.min(100, state.hp - wdef.stress * 2); // 휴식하면 체력도 회복
       floatText(player.pos.x, 2.4, player.pos.z, `${pick(wdef.msg)} (스트레스 ${wdef.stress > 0 ? '+' : ''}${wdef.stress})`, wdef.stress > 0 ? '#fca5a5' : '#4ade80', 15);
@@ -3115,10 +3528,11 @@ function moveToward(c, tx, tz, speed, dt, nav = false) {
 }
 
 function updateNPC(n, dt) {
-  n.chainCD -= dt; n.counterCD -= dt; n.punchT -= dt;
+  n.chainCD -= dt; n.counterCD -= dt; n.punchT -= dt; n.poseT -= dt;
   let sp = 0;
   const bx = n.pos.x, bz = n.pos.z;
   const toPlayer = Math.hypot(player.pos.x - n.pos.x, player.pos.z - n.pos.z);
+  const scared = n.state === 'wander' && n.role === 'staff' && state.warn >= 3 && toPlayer < 7;
 
   if (n.state === 'knocked') {
     const grounded = updateKnocked(n, dt);
@@ -3132,14 +3546,29 @@ function updateNPC(n, dt) {
         }
       }
     }
-    if (n.timer <= 0 && grounded) { n.state = 'getup'; n.timer = 0.5; n.stars.visible = false; }
+    if (n.timer <= 0 && grounded) {
+      if (n.def.event) { n.state = 'vanish'; n.timer = 1.3; } // 이벤트 손님은 쓰러진 채 깜빡이다 사라짐
+      else { n.state = 'getup'; n.timer = 0.5; n.stars.visible = false; }
+    }
+  } else if (n.state === 'vanish') {
+    n.timer -= dt;
+    if (n.timer <= 0) { n.gone = true; actorGone(n, true); }
+  } else if (n.state === 'inspect') {
+    sp = updateInspector(n, dt);
   } else if (n.state === 'getup') {
     if (updateGetup(n, dt)) {
-      if (n.fight && !state.dead) { n.state = 'brawl'; n.timer = 9; n.atkCD = 0.4; n.combo = 0; setFace(n, 'angry'); say(n, pick(['너 이리 와!', '오늘 끝장 보자!', '한 대 맞았으니 두 대!', '이게 미쳤나!']), 1.6); }
-      else if (n.role === 'manager') { n.state = 'chase'; n.timer = 7; n.nagT = 0; setFace(n, 'angry'); }
-      else if (n.role === 'guard') { n.state = state.warn >= 3 ? 'pursue' : 'return'; setFace(n, 'angry'); }
-      else { n.state = 'flee'; n.timer = 2.5; setFace(n, 'scared'); if (n.hits >= 3) say(n, '살려주세요!!'); }
+      // 여러 번 맞았으면 일어나서 잠깐 비틀거림
+      if (n.hits >= 2 && n.role !== 'guard' && n.rig?.acts?.dizzy && Math.random() < 0.6) {
+        n.state = 'dizzy'; n.timer = 1.8; n.stars.visible = true; say(n, pick(['어지러워...', '별이 보여...', '여긴 어디...']), 1.5);
+      } else afterGetup(n);
     }
+  } else if (n.state === 'dizzy') {
+    n.timer -= dt; n.stars.rotation.y += dt * 6;
+    if (n.timer <= 0) { n.stars.visible = false; afterGetup(n); }
+  } else if (n.state === 'sit') { // 의자에 앉아 타자 (★3 이상이면 놀라서 일어남)
+    n.pos.set(n.seat.x, 0, n.seat.z); n.faceTo = n.seatFace;
+    n.timer -= dt;
+    if (n.timer <= 0 || !n.seat.alive || (state.warn >= 3 && toPlayer < 7) || ev.panic || ev.gather) standUp(n);
   } else if (n.state === 'flee') {
     const dx = n.pos.x - player.pos.x, dz = n.pos.z - player.pos.z, d = Math.hypot(dx, dz) || 1;
     sp = moveToward(n, n.pos.x + dx / d * 3, n.pos.z + dz / d * 3, 3.6, dt, true);
@@ -3166,6 +3595,11 @@ function updateNPC(n, dt) {
         floatText(player.pos.x, 2.0, player.pos.z, pick(['퍽!', '빡!']), '#f87171', 20);
       }
     } else if (!standing(player)) n.faceTo = Math.atan2(fx, fz);
+    else if (player.veh) { // 차 안에는 주먹이 안 닿음
+      if (toPlayer > 3) sp = moveToward(n, player.pos.x, player.pos.z, n.def.speed || 2.7, dt, true);
+      else n.faceTo = Math.atan2(fx, fz);
+      if (n.atkCD <= 0 && toPlayer < 5) { n.atkCD = 2.2; say(n, pick(['차에서 내려!!', '내려 이 자식아!', '비겁하게 차 뒤에 숨냐!']), 1.6); }
+    }
     else if (toPlayer > 1.05) sp = moveToward(n, player.pos.x, player.pos.z, n.def.speed || 2.7, dt, true);
     else if (n.atkCD <= 0) {
       n.atkT = 0.3; n.atkCD = 1.1; n.punchT = 0.45; n.punchSide *= -1; n.punchNew = true;
@@ -3181,7 +3615,12 @@ function updateNPC(n, dt) {
     sp = moveToward(n, player.pos.x, player.pos.z, 2.85, dt, true);
     n.nagT -= dt;
     if (n.nagT <= 0) { say(n, pick(n.def.nag), 1.4); n.nagT = 2.5; }
-    if (toPlayer < 0.95 && standing(player)) bust(n);
+    // 차는 거의 멈췄을 때 바로 옆에 붙으면 끌어내려서 체포
+    const caught = player.veh ? Math.abs(player.veh.speed) < 1.2 && distToProp(n.pos, player.veh).d < 0.7 : toPlayer < 0.95;
+    if (caught && standing(player)) {
+      if (player.veh) { exitVehicle(); say(n, '당장 내리세요!', 1.5); }
+      bust(n);
+    }
     if (state.warn < 1.5) { n.state = 'return'; setFace(n, 'normal'); }
   } else if (n.state === 'return') {
     sp = moveToward(n, n.def.post[0], n.def.post[1], 2, dt, true);
@@ -3192,20 +3631,39 @@ function updateNPC(n, dt) {
     n.timer -= dt;
     if (n.timer <= 0) { n.state = 'wander'; setFace(n, 'normal'); }
   } else { // wander
-    if (n.talkT > 0) n.talkT -= dt;
+    if (scared) n.faceTo = Math.atan2(player.pos.x - n.pos.x, player.pos.z - n.pos.z); // 얼어붙어서 벌벌
+    else if (n.talkT > 0) n.talkT -= dt;
     else if (n.idleT > 0) n.idleT -= dt;
     else {
-      if (!n.target) {
+      const g = joinsGather(n);
+      if (!n.target && g) { n.seatGoal = null; n.target = gatherPoint(n); } // 이벤트: 주차장 대피, 집회 참가
+      else if (!n.target) {
         const zn = n.def.zones ? zoneById(pick(n.def.zones)) : n.home;
-        n.target = randomPointIn(zn);
+        // 가끔은 빈 책상 의자에 가서 앉아 일함 (타자 동작이 있을 때만, 실사 소동 중엔 안 앉음)
+        const ch = n.rig?.acts?.typing && (n.role === 'staff' || n.role === 'manager') && !ev.panic && Math.random() < 0.35 ? freeChair(zn) : null;
+        n.seatGoal = ch;
+        n.target = ch ? { x: ch.x, z: ch.z } : randomPointIn(zn);
       }
-      sp = moveToward(n, n.target.x, n.target.z, 1.4, dt, true);
-      if (n.noPath) { n.noPath = false; n.target = null; n.path = null; n.idleT = 0.5; sp = 0; }
-      if (Math.hypot(n.target.x - n.pos.x, n.target.z - n.pos.z) < 0.35) { n.target = null; n.idleT = rand(1.5, 4); }
+      // 실사 소동 중엔 다들 뛰어다님 (청소 여사님도 더 빨리 청소)
+      sp = moveToward(n, n.target.x, n.target.z, ev.panic ? 2.7 : g ? 2.4 : 1.4, dt, true);
+      const sg = n.seatGoal;
+      if (sg && sg.alive && !sg.sitter && Math.hypot(sg.x - n.pos.x, sg.z - n.pos.z) < 1.2) { sitDown(n, sg); sp = 0; }
+      else if (sg && (sp === 0 || !sg.alive || sg.sitter)) { n.seatGoal = null; n.target = null; n.path = null; n.idleT = 0.5; sp = 0; } // 못 가거나 누가 먼저 앉음
+      else if (n.noPath) { n.noPath = false; n.target = null; n.path = null; n.idleT = 0.5; sp = 0; }
+      else if (Math.hypot(n.target.x - n.pos.x, n.target.z - n.pos.z) < 0.35) {
+        n.target = null;
+        if (g) { n.idlePose = ev.gatherPose || pick(['text', 'talk']); n.idleT = rand(6, 10); if (ev.leader) n.faceTo = Math.atan2(ev.leader.pos.x - n.pos.x, ev.leader.pos.z - n.pos.z); }
+        else if (ev.panic) { n.idlePose = null; n.idleT = rand(0.2, 0.8); }
+        else {
+          // 쉬는 동안 구역에 맞는 동작 (영업부 통화, 탕비실 커피 …)
+          n.idlePose = Math.random() < 0.6 ? pick(IDLE_POSES[zoneAt(n.pos.x, n.pos.z)?.id] || ['text', 'talk', 'phone']) : null;
+          n.idleT = n.idlePose ? rand(4, 9) : rand(1.5, 4);
+        }
+      }
     }
   }
 
-  if (standing(n)) {
+  if (standing(n) && n.state !== 'sit') {
     resolveChar(n, false);
     for (const o of [player, ...npcs]) {
       if (o === n || !standing(o)) continue;
@@ -3223,10 +3681,37 @@ function updateNPC(n, dt) {
       }
     }
     n.facing = angLerp(n.facing, n.faceTo, 1 - Math.exp(-10 * dt));
-  }
+  } else if (n.state === 'sit') n.facing = angLerp(n.facing, n.faceTo, 1 - Math.exp(-10 * dt));
+  n.pose = n.state === 'sit' ? 'typing' : n.state === 'dizzy' ? 'dizzy' : n.state === 'inspect' ? n.poseName : n.state !== 'wander' ? null
+    : n.poseT > 0 ? n.poseName : n.talkT > 0 ? 'talk' : scared ? 'terrified' : n.idleT > 0 ? n.idlePose : null;
   animateHuman(n, dt, standing(n) ? sp : 0);
+  if (n.state === 'vanish') n.g.visible = n.g.visible && Math.floor(n.timer * 10) % 2 === 0;
   if (n.state === 'angry') n.armR.rotation.x = -2.4 + Math.sin(T * 12) * 0.4;
   updateBubble(n, dt);
+}
+function afterGetup(n) {
+  if (n.fight && !state.dead) { n.state = 'brawl'; n.timer = 9; n.atkCD = 0.4; n.combo = 0; setFace(n, 'angry'); say(n, pick(['너 이리 와!', '오늘 끝장 보자!', '한 대 맞았으니 두 대!', '이게 미쳤나!']), 1.6); }
+  else if (n.role === 'manager') { n.state = 'chase'; n.timer = 7; n.nagT = 0; setFace(n, 'angry'); }
+  else if (n.role === 'guard') { n.state = state.warn >= 3 ? 'pursue' : 'return'; setFace(n, 'angry'); }
+  else { n.state = 'flee'; n.timer = 2.5; setFace(n, 'scared'); if (n.hits >= 3) say(n, '살려주세요!!'); }
+}
+const IDLE_POSES = { sales: ['phone', 'phone', 'text'], pantry: ['drink', 'drink', 'talk'], lounge: ['drink', 'text', 'talk'], smoke: ['text', 'text', 'talk'], parking: ['phone', 'text'] };
+// 앉을 수 있는 의자 = 책상·파티션 책상 바로 뒤(남쪽 0.85m)에 붙은 사무용 의자
+let seats = null;
+function freeChair(zn) {
+  seats ??= props.filter(p => p.type === 'chair' && props.some(d => ['desk', 'cubicle', 'exec_desk'].includes(d.type) && Math.abs(d.x - p.x) < 0.4 && Math.abs(d.z - p.z + 0.85) < 0.3));
+  const list = seats.filter(p => p.alive && !p.sitter && p.x >= zn.x0 && p.x < zn.x1 && p.z >= zn.z0 && p.z < zn.z1);
+  return list.length ? pick(list) : null;
+}
+function sitDown(n, ch) {
+  n.state = 'sit'; n.seat = ch; ch.sitter = n; n.seatFace = ch.rot + PI; n.timer = rand(8, 18);
+  n.target = null; n.seatGoal = null; n.path = null;
+}
+function leaveSeat(n) { if (n.seat) { n.seat.sitter = null; n.seat = null; } }
+function standUp(n) {
+  const ch = n.seat; leaveSeat(n);
+  n.state = 'wander'; n.idleT = 0.3;
+  n.pos.x = ch.x + Math.sin(ch.rot) * 0.75; n.pos.z = ch.z + Math.cos(ch.rot) * 0.75; // 의자 뒤로 일어남
 }
 function bust(guard) {
   if (cheat.god) return;
@@ -3258,10 +3743,12 @@ function updateProps(dt) {
 let cullDist = 40; // 이보다 먼 사람은 화면 밖이라 안 그림 (카메라 거리에 맞춰 바뀜)
 function updateCamera(dt) {
   const aspect = innerWidth / innerHeight;
-  const dist = tune.camDist * (aspect < 1 ? Math.pow(1 / aspect, 0.6) : 1);
+  const v = player.veh, vk = v ? Math.abs(v.speed) / v.def.ride.max : 0;
+  const dist = tune.camDist * (aspect < 1 ? Math.pow(1 / aspect, 0.6) : 1) * (1 + vk * 0.25); // 빨리 달리면 살짝 멀리
   cullDist = dist * 2.2 + 8;
   const a = tune.camAngle * PI / 180;
-  const tx = player.pos.x, tz = player.pos.z;
+  let tx = player.pos.x, tz = player.pos.z;
+  if (v) { tx += Math.sin(v.rot) * v.speed * 0.35; tz += Math.cos(v.rot) * v.speed * 0.35; } // 가는 쪽을 더 보여줌
   const k = 1 - Math.exp(-8 * dt);
   camera.position.x = lerp(camera.position.x, tx, k);
   camera.position.y = lerp(camera.position.y, dist * Math.sin(a), k);
@@ -3283,26 +3770,38 @@ function updateTarget(dt) {
   tgtT -= dt;
   if (tgtT <= 0) {
     tgtT = 0.1; tgt = null;
-    if (standing(player) && !work.active) {
+    const free = standing(player) && !work.active && !player.veh;
+    const v = free ? nearVehicle() : null, u = free && !v ? nearUseProp() : null;
+    if (v) tgt = { p: v, ride: true };
+    else if (u) tgt = { p: u, use: USE[u.def.use] };
+    else if (free) {
       let nd = 2.0;
       for (const n of npcs) { if (!standing(n)) continue; const d = Math.hypot(n.pos.x - player.pos.x, n.pos.z - player.pos.z); if (d < nd) { nd = d; tgt = { n }; } }
       if (!tgt) {
         let pd = 1.6;
-        for (const p of props) { if (!p.alive) continue; const d = distToBox(player.pos, propBox(p)).d; if (d < pd) { pd = d; tgt = { p }; } }
+        for (const p of props) { if (!p.alive) continue; const d = distToProp(player.pos, p).d; if (d < pd) { pd = d; tgt = { p }; } }
       }
     }
     let label = '대화·업무';
     if (tgt && tgt.n) {
       targetEl.firstChild.textContent = tgt.n.name;
-      targetEl.lastChild.textContent = tgt.n.role === 'cleaner' ? '⚠️ 절대 때리지 마세요 · 💬 대화' : '💬 대화';
-      label = '대화';
+      const qg = tgt.n === quest.giver;
+      targetEl.lastChild.textContent = qg ? '❗ 💬 심부름 받기' : tgt.n.role === 'cleaner' ? '⚠️ 절대 때리지 마세요 · 💬 대화' : '💬 대화';
+      label = qg ? '심부름' : '대화';
     } else if (tgt && tgt.p) {
       const d = tgt.p.def, w = d.work ? d.work.label.replace(/ 중$/, '') : '';
       targetEl.firstChild.textContent = d.name;
-      targetEl.lastChild.textContent = d.fixed ? '🚧 준비중' : (w ? `💬 ${w} · ` : '') + fmtWon(d.value);
-      if (w) label = w;
+      targetEl.lastChild.textContent = d.fixed ? '🚧 준비중' : tgt.use ? tgt.use.hint : tgt.ride ? `💬 타기 · ${fmtWon(d.value)}` : (w ? `💬 ${w} · ` : '') + fmtWon(d.value);
+      if (tgt.use) label = tgt.use.label;
+      else if (tgt.ride) label = '타기';
+      else if (w) label = w;
     }
+    if (player.veh) label = '내리기';
     talkLbl.textContent = label;
+    // 👊 버튼도 타고 있을 때는 경적 / 지게차는 들기
+    const fork = player.veh && player.veh.def.ride.fork;
+    const pk = player.veh ? (fork ? '🔼|들기·놓기' : '📯|경적') : '👊|펀치';
+    if (btnPunch.dataset.k !== pk) { btnPunch.dataset.k = pk; const [ic, tx] = pk.split('|'); btnPunch.firstChild.textContent = ic; btnPunch.lastChild.textContent = tx; }
   }
   const alive = tgt && (tgt.n ? standing(tgt.n) && tgt.n.bubbleT <= 0 : tgt.p.alive);
   if (!alive) { targetEl.style.display = 'none'; return; }
@@ -3324,7 +3823,8 @@ function updateHUD(dt) {
   const w = Math.floor(state.warn);
   $('#stars').innerHTML = '<b>' + '★'.repeat(w) + '</b>' + '★'.repeat(5 - w);
   const zn = zoneAt(player.pos.x, player.pos.z);
-  $('#where').textContent = `📍 ${zn ? zn.name + ' ' + zn.en : ''}`;
+  renderQuestBox();
+  $('#where').textContent = `📍 ${zn ? zn.name + ' ' + zn.en : ''}` + (player.veh ? ` · ${Math.round(Math.abs(player.veh.speed) * 3.6)}km/h` : '');
 }
 function update(dt) {
   T += dt;
@@ -3333,10 +3833,14 @@ function update(dt) {
   if (!state.dead && state.hurtT > 5) state.hp = Math.min(100, state.hp + 4 * dt);
   state.quietT += dt;
   if (state.quietT > 6) { state.warn = Math.max(0, state.warn - 0.08 * dt); state.lastStars = Math.min(state.lastStars, Math.floor(state.warn)); }
-  snd.intensity = state.warn >= 3 ? 1 : 0;
+  // 긴박한 음악: ★3 이상, 또는 이벤트 중 (식약처는 결과가 나오면 끝)
+  const evOn = ev.kind === 'mfds' ? ev.phase !== 'leave' : ev.kind === 'fire' || ev.kind === 'union';
+  snd.intensity = state.warn >= 3 || evOn ? 1 : 0;
   updatePlayer(dt);
   updateTarget(dt);
   for (const n of npcs) updateNPC(n, dt);
+  for (let i = npcs.length - 1; i >= 0; i--) if (npcs[i].gone) despawnNPC(npcs[i]);
+  updateEvents(dt);
   updateProps(dt);
   NAV.t -= dt; if (NAV.t <= 0) { NAV.t = 2; buildNav(); }
   updateRockets(dt);
@@ -3345,6 +3849,7 @@ function update(dt) {
   updateFloats(dt);
   updateCamera(dt);
   updateHUD(dt);
+  drawMinimap(dt);
 }
 let last = performance.now();
 function loop(now) {
@@ -3355,6 +3860,321 @@ function loop(now) {
   if (hitstop > 0) { hitstop -= dt; dt = 0; }
   update(dt);
   renderer.render(scene, camera);
+}
+
+/* =====================================================================
+   15. 이벤트 / 심부름
+   ===================================================================== */
+// 이벤트는 한 번에 하나만: 식약처 실사(복도 공중전화로 신고), 화재 대피 훈련·노조 집회(가끔 저절로)
+const ev = { kind: null, phase: '', actors: [], stop: 0, atStop: false, stopT: 0, sayT: 0, lineT: 0, t: 0, bellT: 0,
+  panic: false, gather: null, gatherPose: null, leader: null, cool: 0, next: rand(150, 240) };
+// 💬로 쓰는 물건 (기물 정의의 use)
+const USE = {
+  report: { label: '신고', hint: '💬 식약처에 몰래 신고하기', act: reportMFDS },
+};
+function nearUseProp() {
+  let best = null, bd = 1.4;
+  for (const p of props) if (p.alive && p.def.use) { const d = distToProp(player.pos, p).d; if (d < bd) { bd = d; best = p; } }
+  return best;
+}
+function despawnNPC(n) {
+  npcs.splice(npcs.indexOf(n), 1);
+  leaveSeat(n); scene.remove(n.g); n.bubble?.remove();
+  if (quest.giver === n) quest.giver = null;
+}
+function endEvent(cool = 0) {
+  Object.assign(ev, { kind: null, phase: '', actors: [], panic: false, gather: null, gatherPose: null, leader: null, cool, next: rand(150, 240) });
+}
+function updateEvents(dt) {
+  ev.cool -= dt;
+  if (ev.kind === 'fire' || ev.kind === 'union') updateTimedEvent(dt);
+  else if (!ev.kind) { ev.next -= dt; if (ev.next <= 0) startRandomEvent(); }
+  if (ev.panic) { ev.lineT -= dt; if (ev.lineT <= 0) { ev.lineT = rand(0.7, 1.4); panicLine(); } }
+  updateQuests(dt);
+}
+
+// ---------- 식약처 불시 실사 ----------
+// 신고 → 실사관·계약직이 정문으로 들어와 분석센터 → 품질관리팀 → 생산동 순서로 점검
+// 둘 다 쓰러뜨리면 수배·피해액 0, 생산동 점검이 끝나면 추징금 물고 돌아감
+const MFDS_ROUTE = [
+  { x: 46.5, z: -7.2, zone: '분석센터', dur: 5, lines: ['장비 교정 기록 보여주세요', '이 데이터 수정 이력은요?', 'audit trail이 꺼져 있네요?'] },
+  { x: 8, z: -7.2, zone: '품질관리팀', dur: 5, lines: ['로그북 서명 누락이네요', '원본 데이터 어디 있죠?', 'OOS 조사 보고서 주세요'] },
+  { x: -52, z: -10.5, zone: '생산동', dur: 6, final: true, lines: ['배치 기록서가 엉망이네요', '청소 기록이 없어요!', '이건 중대 지적입니다!'] },
+];
+const MFDS_TEMP_LINES = ['네 실사관님! 사진 찍었습니다', '서류 박스 여기 둘게요', '이것도 지적사항인가요?', '받아 적었습니다!'];
+const PANIC_LINES = ['식약처다!!', '청소해 청소!', '데이터들 다 숨겨!', '로그북 어딨어?!', '서명 빨리 해!', '라벨 다시 붙여!', '실사 대응 매뉴얼 어딨어?!', '사진 찍히면 안 돼!'];
+const CLEANER_PANIC = ['아이고 이게 무슨 일이람!', '바닥부터 닦아야겠네!', '비켜비켜 청소 중이야!'];
+function reportMFDS(p) {
+  if (ev.kind === 'mfds' || ev.kind === 'call') { floatText(p.x, 2, p.z, '이미 실사 중이에요!', '#facc15', 16); return; }
+  if (ev.kind) { floatText(p.x, 2, p.z, '지금은 회사가 너무 시끄러워요... 나중에', '#9aa4b8', 15); return; }
+  if (ev.cool > 0) { floatText(p.x, 2, p.z, `뚜- 뚜- 통화 중... (${Math.ceil(ev.cool)}초 뒤 다시)`, '#9aa4b8', 15); return; }
+  ev.kind = 'call'; sfx('ring');
+  floatText(player.pos.x, 2.4, player.pos.z, '"식약처죠? 익명으로 제보할 게 있는데요..."', '#e2e8f0', 15);
+  setTimeout(startMFDS, 1800);
+}
+function startMFDS() {
+  Object.assign(ev, { kind: 'mfds', phase: 'go', stop: 0, atStop: false, sayT: 0, panic: true, lineT: 1.5 });
+  ev.actors = EVENT_CAST.map((def, i) => {
+    const c = spawnNPC(def);
+    c.pos.set(GATE_X - 1 - i * 0.6, 0, MAP_Z1 - 1.8 - i * 1.3); c.state = 'inspect'; c.facing = c.faceTo = PI;
+    return c;
+  });
+  banner('🚨 식약처 불시 실사!! 🚨\n실사관이 정문으로 들어옵니다', 4000, true);
+  sfx('siren'); setTimeout(() => sfx('siren'), 450); shakeAmt = Math.max(shakeAmt, 0.3 * tune.shake);
+  for (const n of npcs) {
+    if (n.role === 'cleaner') say(n, CLEANER_PANIC[0], 2.5);
+    if (n.state === 'wander') { n.target = null; n.path = null; n.idleT = 0; }
+  }
+}
+function panicLine() {
+  const near = npcs.filter(n => (n.state === 'wander' || n.state === 'sit') && n.role !== 'guard' && Math.hypot(n.pos.x - player.pos.x, n.pos.z - player.pos.z) < 16);
+  if (!near.length) return;
+  const n = pick(near);
+  say(n, pick(n.role === 'cleaner' ? CLEANER_PANIC : PANIC_LINES), 1.6);
+}
+// 실사관 일행 움직임 (updateNPC의 'inspect' 상태). 앞장선 사람이 점검 장소를 돌고, 나머지는 졸졸 따라감
+function updateInspector(n, dt) {
+  if (ev.phase === 'leave') { // 정문으로 돌아가서 사라짐
+    n.poseName = null;
+    const sp = moveToward(n, GATE_X, MAP_Z1 - 1.2, 2, dt, true);
+    if (Math.hypot(n.pos.x - GATE_X, n.pos.z - (MAP_Z1 - 1.2)) < 1) { n.gone = true; actorGone(n, false); }
+    return sp;
+  }
+  const lead = ev.actors.find(a => a.state === 'inspect');
+  if (n !== lead) { // 따라다니며 받아 적기: 앞사람 1.5m 뒤 자리를 목표로, 멀수록 조금 빠르게 (멈췄다 뛰었다 안 하게)
+    n.poseName = ev.atStop ? 'text' : null;
+    const bx = lead.pos.x - Math.sin(lead.facing) * 1.5, bz = lead.pos.z - Math.cos(lead.facing) * 1.5;
+    const d = Math.hypot(bx - n.pos.x, bz - n.pos.z);
+    if (n.follow ? d < 0.2 : d < 0.7) n.follow = false; else n.follow = true; // 출발·정지 사이에 여유
+    if (n.follow) return moveToward(n, bx, bz, clamp(1.2 + (d - 0.5) * 0.8, 1.2, 2.4), dt, true);
+    n.faceTo = Math.atan2(lead.pos.x - n.pos.x, lead.pos.z - n.pos.z);
+    return 0;
+  }
+  const st = MFDS_ROUTE[ev.stop];
+  if (!ev.atStop) { // 다음 점검 장소로
+    n.poseName = null;
+    const sp = moveToward(n, st.x, st.z, 1.7, dt, true);
+    if (Math.hypot(st.x - n.pos.x, st.z - n.pos.z) < 1.2 || sp === 0) {
+      ev.atStop = true; ev.stopT = st.dur; ev.sayT = 0;
+      banner(`📋 식약처 실사관이 ${st.zone} 점검 중!${st.final ? '\n여기서 걸리면 추징금!' : ''}`, 2600, !!st.final);
+    }
+    return sp;
+  }
+  n.poseName = 'angry'; // 삿대질하며 지적
+  ev.stopT -= dt; ev.sayT -= dt;
+  if (ev.sayT <= 0) {
+    ev.sayT = 1.9; say(n, pick(st.lines), 1.7); grunt(n.def.voice, 0.1);
+    const f = ev.actors.find(a => a !== n && a.state === 'inspect');
+    if (f && Math.random() < 0.5) say(f, pick(MFDS_TEMP_LINES), 1.5);
+  }
+  if (ev.stopT <= 0) { ev.atStop = false; if (st.final) mfdsFail(); else ev.stop++; }
+  return 0;
+}
+function mfdsFail() {
+  const fine = Math.round(rand(3, 12)) * 1e8;
+  state.damage += fine; addStress(15);
+  banner(`🚨 식약처 실사에서 걸렸습니다!\n회사 추징금 ${fmtWon(fine)}`, 4500, true); sfx('siren'); sfx('boom');
+  for (const a of ev.actors) if (a.state === 'inspect') say(a, pick(['결과는 공문으로 보내드리죠', '시정 조치 기대하겠습니다', '수고하셨습니다~']), 2.5);
+  ev.phase = 'leave'; ev.panic = false;
+}
+// 실사관 일행이 사라짐 (beaten: 맞아서 쓰러짐)
+function actorGone(n, beaten) {
+  ev.actors = ev.actors.filter(a => a !== n);
+  if (ev.kind !== 'mfds') return;
+  if (beaten && ev.phase !== 'leave') floatText(n.pos.x, 2.2, n.pos.z, `${n.name} 퇴장!`, '#4ade80', 22);
+  if (ev.actors.length) return;
+  if (ev.phase !== 'leave') { // 둘 다 쓰러뜨림
+    state.warn = 0; state.lastStars = 0; state.damage = 0; addStress(-20);
+    player.poseName = 'victory'; player.poseT = 2.5;
+    banner('🎉 식약처 실사관을 물리쳤습니다!\n수배와 피해액이 모두 없던 일로!', 4500, true); sfx('done');
+  }
+  endEvent(40); // 공중전화는 40초 뒤에 다시 쓸 수 있음
+}
+
+// ---------- 저절로 생기는 이벤트: 화재 대피 훈련 / 노조 집회 ----------
+function joinsGather(n) {
+  if (!ev.gather || n.role === 'guard' || n === ev.leader || n.def.event) return false;
+  return ev.gather !== 'union' || n.role === 'staff' || n.role === 'manager';
+}
+function gatherPoint(n) {
+  if (ev.gather !== 'union') return randomPointIn(zoneById(ev.gather));
+  const L = ev.leader.pos; // 위원장 주변에 빙 둘러섬
+  for (let i = 0; i < 10; i++) {
+    const a = rand(0, PI * 2), r = rand(1.8, 4), x = L.x + Math.cos(a) * r, z = L.z + Math.sin(a) * r;
+    if (Math.abs(x) < MAP_X - 1 && z > MAP_Z0 + 1 && z < MAP_Z1 - 1 && navFree(x, z) && !insideAnyProp(x, z, 0.4)) return { x, z };
+  }
+  return { x: L.x + 2, z: L.z };
+}
+function startRandomEvent() {
+  const L = npcs.find(n => n.name === '노조위원장' && n.state === 'wander');
+  for (const n of npcs) if (n.state === 'wander') { n.target = null; n.path = null; n.idleT = 0; }
+  if (L && Math.random() < 0.5) {
+    Object.assign(ev, { kind: 'union', t: 40, gather: 'union', gatherPose: 'clap', leader: L, sayT: 0 });
+    L.idleT = 99; L.poseName = 'angry'; L.poseT = 99; // 위원장은 제자리에서 구호
+    banner('✊ 노조 집회 시작!\n위원장 옆에 있으면 스트레스가 풀려요', 3500, true);
+  } else {
+    Object.assign(ev, { kind: 'fire', t: 35, gather: 'parking', gatherPose: null, bellT: 0 });
+    banner('🔔 화재 대피 훈련!\n35초 안에 건물 밖으로 대피하세요', 3500, true);
+  }
+}
+function updateTimedEvent(dt) {
+  if (ev.kind === 'fire') { ev.bellT -= dt; if (ev.bellT <= 0) { ev.bellT = 2.2; sfx('bell'); } }
+  if (ev.kind === 'union') {
+    const L = ev.leader;
+    if (!npcs.includes(L) || L.state !== 'wander') { banner('✊ 위원장이 쓰러져서 집회 해산!', 2600); finishTimedEvent(false); return; }
+    ev.sayT -= dt;
+    if (ev.sayT <= 0) {
+      ev.sayT = 2.2; say(L, pick(['단결! 투쟁!', '임금 인상 쟁취하자!', '야근 수당 지급하라!', '회장님은 각성하라!']), 1.8); grunt(L.def.voice, 0.15);
+      const crowd = npcs.filter(n => n !== L && n.state === 'wander' && n.idlePose === 'clap' && n.idleT > 0);
+      if (crowd.length) say(pick(crowd), pick(['투쟁!!', '옳소!', '와아아!', '단결!']), 1.4);
+    }
+    if (Math.hypot(player.pos.x - L.pos.x, player.pos.z - L.pos.z) < 5) addStress(-1.5 * dt);
+  }
+  ev.t -= dt;
+  if (ev.t <= 0) finishTimedEvent(true);
+}
+function finishTimedEvent(done) {
+  if (ev.kind === 'fire') {
+    if (zoneAt(player.pos.x, player.pos.z)?.outdoor) { addStress(-10); banner('✅ 대피 훈련 끝! 모범 사원 (스트레스 -10)', 3000); }
+    else { addStress(5); banner('😅 대피 훈련 끝... 대피 안 해서 경위서 (스트레스 +5)', 3000); }
+  } else if (done) banner('✊ 집회 끝! 다들 일터로 돌아갑니다', 2600);
+  if (ev.leader) { ev.leader.poseT = 0; ev.leader.idleT = 1; }
+  for (const n of npcs) if (n.state === 'wander') { n.target = null; n.path = null; n.idleT = Math.min(n.idleT, rand(0, 1.5)); }
+  endEvent();
+}
+
+// ---------- 심부름: ❗ 뜬 사람에게 💬 → 할 일 → 하면 스트레스 -15, 체력 +20 ----------
+const QUESTS = [
+  { kind: 'work', key: 'coffee', n: 3, text: '커피 3잔 타 오기', line: '커피 3잔만 타다 줄래? 회의가 끝이 안 나...' },
+  { kind: 'work', key: 'hplc', n: 1, text: 'HPLC 시료 돌리기', line: 'HPLC 시료 하나만 돌려 줘! 오늘까지래!' },
+  { kind: 'work', key: 'pc', n: 2, text: '보고서 2건 대신 쓰기', line: '내 보고서 2건만 대신 써 주면 안 될까...?' },
+  { kind: 'work', key: 'diss', n: 1, text: '용출 시험 걸기', line: '용출 시험 하나만 걸어 줘, 나 반차야!' },
+  { kind: 'work', key: 'massage', n: 1, text: '휴게실 안마의자에서 쉬기', line: '너 너무 피곤해 보여. 안마의자라도 하고 와' },
+  { kind: 'break', key: 'printer', n: 1, text: '복합기 부수기', line: '저 복합기 또 종이 걸렸어... 그냥 부숴 버려 줄래?' },
+  { kind: 'break', key: 'vending', n: 1, text: '자판기 부수기', line: '자판기가 내 돈 먹었어! 혼 좀 내 줘!' },
+  { kind: 'break', key: 'shredder', n: 1, text: '문서 세단기 부수기', line: '세단기가 내 보고서 원본까지 갈아 버렸어...' },
+  { kind: 'hit', key: '김부장', n: 1, text: '김부장님 한 대 때리기', line: '김부장님한테... 아니야 농담이야. (진심임)' },
+  { kind: 'hit', key: '홍상무', n: 1, text: '홍상무님 한 대 때리기', line: '홍상무님 회의 2시간째래. 누가 좀 말려 줬으면...' },
+  { kind: 'hit', key: '강차장', n: 1, text: '강차장님 한 대 때리기', line: '강차장님이 또 내 실적 가로챘어. 복수 좀...' },
+];
+const quest = { giver: null, active: null, cool: 10, pickT: 0 };
+const qmarkEl = $('#qmark');
+function updateQuests(dt) {
+  quest.cool -= dt; quest.pickT -= dt;
+  const g = quest.giver;
+  if (g && (!npcs.includes(g) || !standing(g))) quest.giver = null;
+  if (!quest.active && !quest.giver && quest.cool <= 0 && quest.pickT <= 0) { // 근처 직원 한 명에게 ❗
+    quest.pickT = 2;
+    const cand = npcs.filter(n => (n.role === 'staff' || n.role === 'manager') && (n.state === 'wander' || n.state === 'sit')
+      && Math.hypot(n.pos.x - player.pos.x, n.pos.z - player.pos.z) < 25);
+    if (cand.length) quest.giver = pick(cand);
+  }
+  const q = quest.giver, s = q && q.g.visible ? toScreen(q.pos.x, q.pos.y + 2.4 * q.s, q.pos.z) : null;
+  qmarkEl.style.display = s && s.ok ? 'block' : 'none';
+  if (s) qmarkEl.style.transform = `translate(${s.x}px, ${s.y}px) translate(-50%, -100%)`;
+}
+function startQuest(n) {
+  const ok = QUESTS.filter(q => q.kind === 'work' || (q.kind === 'break' ? props.some(p => p.alive && p.type === q.key) : q.key !== n.name && npcs.some(o => o.name === q.key)));
+  const q = pick(ok);
+  quest.active = { q, have: 0, from: n.name }; quest.giver = null;
+  say(n, q.line, 3.5); grunt(n.def.voice, 0.1);
+  banner(`📋 ${n.name}의 심부름\n${q.text}`, 2600); sfx('click');
+}
+// 일·부수기·때리기가 일어날 때마다 불림 (key: 업무 정의 / 기물 종류 / 사람 이름)
+function questProgress(kind, v) {
+  const a = quest.active;
+  if (!a || a.q.kind !== kind || (kind === 'work' ? WORK[a.q.key] !== v : a.q.key !== v)) return;
+  a.have++;
+  if (a.have < a.q.n) { floatText(player.pos.x, 2.6, player.pos.z, `📋 ${a.have}/${a.q.n}`, '#facc15', 18); return; }
+  quest.active = null; quest.cool = 15;
+  addStress(-15); state.hp = Math.min(100, state.hp + 20);
+  player.poseName = 'victory'; player.poseT = 2.2;
+  banner(`✅ 심부름 완료! (스트레스 -15, 체력 +20)\n${a.from}: "${pick(['고마워! 밥 한번 살게', '역시 너밖에 없다', '이 은혜 잊지 않을게...', '오~ 일 잘하네?'])}"`, 3200); sfx('done');
+}
+// 왼쪽 위 할 일 목록 (updateHUD에서 0.1초마다)
+const questEl = $('#quest');
+function renderQuestBox() {
+  const L = [], a = quest.active;
+  if (ev.kind === 'mfds') L.push(ev.phase === 'leave' ? '<div class="ev">🚨 실사 끝 · 실사관 퇴장 중</div>'
+    : `<div class="ev">🚨 식약처 실사! 실사관 쓰러뜨리기 (${ev.actors.length}명 남음)</div><div class="dim">${ev.atStop ? '지금 ' + MFDS_ROUTE[ev.stop].zone + ' 점검 중' : '다음 점검: ' + MFDS_ROUTE[ev.stop].zone} · 생산동에서 걸리면 추징금</div>`);
+  else if (ev.kind === 'fire') L.push(`<div class="ev">🔔 화재 대피 훈련 ${Math.ceil(ev.t)}초</div><div class="dim">건물 밖으로 대피!</div>`);
+  else if (ev.kind === 'union') L.push(`<div class="ev">✊ 노조 집회 ${Math.ceil(ev.t)}초</div><div class="dim">위원장 옆에서 스트레스 해소</div>`);
+  if (a) L.push(`<div>📋 ${a.from}: ${a.q.text} (${a.have}/${a.q.n})</div>`);
+  else if (quest.giver) L.push(`<div class="dim">❗ ${quest.giver.name}에게 심부름이 있어요</div>`);
+  if (!ev.kind && ev.cool <= 0) L.push('<div class="dim">📞 복도 서쪽 끝 공중전화: 식약처 신고</div>');
+  const html = L.join('');
+  if (questEl.dataset.h !== html) { questEl.dataset.h = html; questEl.innerHTML = html; }
+}
+
+
+// ---------- 미니맵: 방 + 내 위치 + (심부름·이벤트 때만) 목표 위치 ----------
+const MM = { W: 1024, H: 384, big: false, t: 0, bg: null, bgText: null };
+const mmEl = $('#minimap'), mm = mmEl.getContext('2d');
+const mmX = x => (x + MAP_X) / (MAP_X * 2) * MM.W, mmY = z => (z - MAP_Z0) / (MAP_Z1 - MAP_Z0) * MM.H;
+function toggleMap(on = !MM.big) {
+  MM.big = on; MM.t = 0; mmEl.classList.toggle('big', on); sfx('click');
+}
+mmEl.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); toggleMap(); });
+function buildMinimapBg(labels) {
+  const c = document.createElement('canvas'); c.width = MM.W; c.height = MM.H;
+  const x = c.getContext('2d');
+  x.fillStyle = '#161a24'; x.fillRect(0, 0, MM.W, MM.H);
+  for (const zn of ZONES) {
+    const x0 = mmX(zn.x0), y0 = mmY(zn.z0), w = mmX(zn.x1) - x0, h = mmY(zn.z1) - y0;
+    x.globalAlpha = zn.locked ? 0.25 : zn.outdoor ? 0.45 : zn.id === 'hall' ? 0.6 : 0.7;
+    x.fillStyle = zn.id === 'hall' ? '#6b7280' : zn.color; x.fillRect(x0, y0, w, h);
+    x.globalAlpha = 1; x.strokeStyle = 'rgba(255,255,255,.3)'; x.lineWidth = 2; x.strokeRect(x0 + 1, y0 + 1, w - 2, h - 2);
+  }
+  x.strokeStyle = '#e5e7eb'; x.lineWidth = 5; x.strokeRect(mmX(-MAP_X), mmY(MAP_Z0), mmX(MAP_X) - mmX(-MAP_X), mmY(14) - mmY(MAP_Z0)); // 건물 외벽
+  if (labels) {
+    x.font = 'bold 24px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round';
+    for (const zn of ZONES) {
+      if (zn.id === 'hall') continue;
+      const t = zn.name + (zn.locked ? ' 🔒' : ''), cx = mmX((zn.x0 + zn.x1) / 2), cy = mmY((zn.z0 + zn.z1) / 2);
+      x.lineWidth = 5; x.strokeStyle = 'rgba(0,0,0,.7)'; x.strokeText(t, cx, cy); x.fillStyle = '#fff'; x.fillText(t, cx, cy);
+    }
+  }
+  return c;
+}
+// 지금 표시할 목표들 [{ x, z, c: 색, l: 이름 }]
+function minimapTargets() {
+  const out = [], a = quest.active;
+  const nearest = list => list.sort((p, q) => Math.hypot(p.x - player.pos.x, p.z - player.pos.z) - Math.hypot(q.x - player.pos.x, q.z - player.pos.z)).slice(0, 3);
+  if (a) {
+    if (a.q.kind === 'hit') for (const n of npcs) { if (n.name === a.q.key) out.push({ x: n.pos.x, z: n.pos.z, c: '#facc15', l: n.name }); }
+    else for (const p of nearest(props.filter(p => p.alive && (a.q.kind === 'work' ? p.def.work === WORK[a.q.key] : p.type === a.q.key))))
+      out.push({ x: p.x, z: p.z, c: '#facc15', l: p.def.name });
+  } else if (quest.giver) out.push({ x: quest.giver.pos.x, z: quest.giver.pos.z, c: '#facc15', l: '❗ ' + quest.giver.name });
+  if (ev.kind === 'mfds') {
+    for (const n of ev.actors) out.push({ x: n.pos.x, z: n.pos.z, c: '#ef4444', l: n.name });
+    if (ev.phase !== 'leave') { const st = MFDS_ROUTE[ev.stop]; out.push({ x: st.x, z: st.z, c: 'rgba(239,68,68,.35)', l: '점검: ' + st.zone, ring: true }); }
+  } else if (ev.kind === 'union' && ev.leader) out.push({ x: ev.leader.pos.x, z: ev.leader.pos.z, c: '#fb923c', l: '노조위원장' });
+  else if (!ev.kind && ev.cool <= 0) { const ph = props.find(p => p.def.use === 'report'); if (ph) out.push({ x: ph.x, z: ph.z, c: '#60a5fa', l: '📞 신고 전화' }); }
+  return out;
+}
+function drawMinimap(dt) {
+  MM.t -= dt; if (MM.t > 0) return; MM.t = MM.big ? 0.05 : 0.15;
+  if (!MM.bg) { MM.bg = buildMinimapBg(false); MM.bgText = buildMinimapBg(true); }
+  mm.drawImage(MM.big ? MM.bgText : MM.bg, 0, 0);
+  const k = MM.big ? 1 : 2.6, pulse = 0.75 + 0.25 * Math.sin(T * 6); // 작은 지도는 줄어들어 보이니까 표시를 크게
+  if (ev.kind === 'fire') { // 대피 장소 깜빡임
+    const z = zoneById('parking'); mm.strokeStyle = `rgba(250,204,21,${pulse})`; mm.lineWidth = 6 * k;
+    mm.strokeRect(mmX(z.x0), mmY(z.z0), mmX(z.x1) - mmX(z.x0), mmY(z.z1) - mmY(z.z0));
+  }
+  mm.font = 'bold 20px sans-serif'; mm.textAlign = 'left'; mm.textBaseline = 'middle'; mm.lineJoin = 'round';
+  for (const m of minimapTargets()) {
+    const px = mmX(m.x), py = mmY(m.z), r = (m.ring ? 16 : 9) * k * (m.ring ? 1 : pulse);
+    mm.beginPath(); mm.arc(px, py, r, 0, PI * 2); mm.fillStyle = m.c; mm.fill();
+    mm.lineWidth = 2.5 * k; mm.strokeStyle = m.ring ? '#ef4444' : '#000'; mm.stroke();
+    if (MM.big && m.l) { mm.lineWidth = 4; mm.strokeStyle = 'rgba(0,0,0,.8)'; mm.strokeText(m.l, px + r + 5, py); mm.fillStyle = '#fff'; mm.fillText(m.l, px + r + 5, py); }
+  }
+  // 나 (보는 방향 화살표)
+  mm.save(); mm.translate(mmX(player.pos.x), mmY(player.pos.z)); mm.rotate(-player.facing);
+  const s = 13 * k;
+  mm.beginPath(); mm.moveTo(0, s); mm.lineTo(-s * 0.7, -s * 0.6); mm.lineTo(0, -s * 0.25); mm.lineTo(s * 0.7, -s * 0.6); mm.closePath();
+  mm.fillStyle = '#4ade80'; mm.fill(); mm.lineWidth = 2.5 * k; mm.strokeStyle = '#000'; mm.stroke();
+  mm.restore();
+  if (MM.big) { mm.textAlign = 'right'; mm.fillStyle = 'rgba(255,255,255,.7)'; mm.fillText('화면을 누르면 닫혀요 (PC: M)', MM.W - 14, MM.H - 18); }
 }
 
 /* =====================================================================
@@ -3429,6 +4249,10 @@ const TIPS = [
   '팁: 날아간 동료로 다른 동료를 맞히면 연쇄 보너스!',
   '팁: 김부장님은 맞고 나면 쫓아오면서 잔소리합니다.',
   '팁: 소화기를 부수면 사무실이 하얘집니다.',
+  '팁: 주차장 차 옆에서 💬를 누르면 탈 수 있어요. 대표님 차는... 책임 못 집니다.',
+  '팁: 생산동 지게차로 팔레트를 들어 옮길 수 있어요. 지게차에서 👊 = 들기·놓기',
+  '팁: 복도 서쪽 끝 공중전화로 식약처에 몰래 신고할 수 있어요. 실사관을 막으면... 모든 게 없던 일로?',
+  '팁: 머리 위에 ❗가 뜬 동료에게 말을 걸면 심부름을 줍니다.',
 ];
 let selectedDept = store.get('gta_dept', 'qc');
 const deptGrid = $('#deptGrid');
@@ -3448,7 +4272,6 @@ function renderDeptSel() { for (const b of deptGrid.children) b.classList.toggle
 renderDeptSel();
 const inCompany = $('#inCompany'); // 회사 이름은 저장하지 않음 (켤 때마다 빈칸, 비밀 단어가 남지 않게)
 // 히든 주인공: 회사 이름에 비밀 단어를 넣어야만 돼지 선택 칸이 열림 (켤 때마다 다시 입력)
-// models/pig 파일이 있을 때만 작동 → 공개 사이트에는 파일을 안 올려서 아무 일도 안 일어남
 // 대소문자 구분 없음. 한글 자판 상태로 치면 'ㅔㅑ흐ㅐㅇㄷ'가 되니까 그것도 인정
 const PIG_CODES = ['pigmode', 'ㅔㅑ흐ㅐㅇㄷ'], PIG_COMPANY = '꿀꿀제약';
 const isPigCode = v => PIG_CODES.includes(v.trim().toLowerCase());
